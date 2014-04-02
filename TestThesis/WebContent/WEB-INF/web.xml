@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd" id="WebApp_ID" version="3.0">
+  <display-name>Enrollment</display-name>
+  <welcome-file-list>
+    <welcome-file>index.jsp</welcome-file>
+  </welcome-file-list>
+  <servlet>
+    <servlet-name>Process</servlet-name>
+    <servlet-class>servlets.Process</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>Process</servlet-name>
+    <url-pattern>/process</url-pattern>
+  </servlet-mapping>
+  <servlet>
+    <servlet-name>UpdateStudyUnit</servlet-name>
+    <servlet-class>servlets.UpdateStudyUnit</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>UpdateStudyUnit</servlet-name>
+    <url-pattern>/updateExam</url-pattern>
+  </servlet-mapping>
+  <servlet>
+    <servlet-name>DeleteStudyUnit</servlet-name>
+    <servlet-class>servlets.DeleteStudyUnit</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>DeleteStudyUnit</servlet-name>
+    <url-pattern>/deleteExam</url-pattern>
+  </servlet-mapping>
+  <servlet>
+    <servlet-name>StudentSuggestions</servlet-name>
+    <servlet-class>servlets.StudentSuggestions</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>StudentSuggestions</servlet-name>
+    <url-pattern>/suggestStudents</url-pattern>
+  </servlet-mapping>
+  <servlet>
+    <servlet-name>GetEvents</servlet-name>
+    <servlet-class>servlets.GetEvents</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>GetEvents</servlet-name>
+    <url-pattern>/getEvents</url-pattern>
+  </servlet-mapping>
+</web-app>

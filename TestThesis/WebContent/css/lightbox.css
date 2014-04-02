@@ -1,0 +1,359 @@
+.autocomplete-suggestions 
+{ 
+	border: 1px solid #999; 
+	background: #fff; 
+	cursor: default; 
+	overflow: auto; 
+}
+
+.autocomplete-suggestion 
+{ 
+	padding: 10px 5px; 
+	font-size: 1.2em; 
+	white-space: nowrap; 
+	overflow: hidden; 
+}
+
+.autocomplete-selected 
+{ 
+	background: #f0f0f0; 
+}
+
+.autocomplete-suggestions strong 
+{ 
+	font-weight: normal; 
+	color: #3399ff; 
+}
+
+#all_tab
+{
+	left: 89px;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+}
+
+#button-div
+{
+	width: 500px; 
+	position: absolute;
+	bottom: 9px;
+}
+
+#cancel-btn
+{
+	color: #454544;
+	background-color: white;
+}
+
+#custom_form
+{
+	position: absolute;
+	top: 100px;
+	left: 200px;
+	z-index: 10001;
+	display: none;
+	background-color: white;
+	border: 2px outset gray;
+	padding: 10px;
+	width: 510px;
+	height: 380px;
+}
+
+#create_btn
+{
+	position: absolute;
+	top: 5px;
+	left: 50px;
+	background-color: #22A1BC;
+	color: white;
+	text-shadow: 0px -1px 0px #6F6F6F;
+}
+
+#delete-btn
+{
+	color: white;
+	text-shadow: 0px -1px 0px #6F6F6F;
+	background-color: #FF8831;
+	float: right;
+	border: 1px solid #FF8831;
+}
+
+#dhx_minical_icon
+{
+	left: 370px;	
+}
+
+/*event in day or week view*/
+.dhx_cal_event.year1_event div
+{
+	background-color: #009966 !important;
+	color: black !important;
+}
+
+.dhx_cal_event.year2_event div
+{
+	background-color: #FF9933 !important;
+	color: black !important;
+}
+ 
+/*multi-day event in month view*/
+.dhx_cal_event_line.year1_event
+{
+	background-color: #009966 !important;
+	color: black !important;
+}
+
+.dhx_cal_event_line.year2_event
+{
+	background-color: #FF9933 !important;
+	color: black !important;
+}
+ 
+/*event with fixed time, in month view*/
+.dhx_cal_event_clear.year1_event
+{
+    color: black !important;
+}
+
+.dhx_cal_event_clear.year2_event
+{
+	color: black !important;
+}
+
+div.ui-datepicker
+{
+ 	font-size:10px;
+}
+
+#end_date
+{
+	margin-left:0px;
+}
+
+#evening_tab
+{
+	left: 394px;
+	width: 60px;
+	border-radius: 0px;
+}
+
+.event_colour
+{
+	background: #1796b0
+}
+
+.field-elements
+{
+	margin-left: 10px;
+	border: 1px solid #CECECE;
+	background-color: #F9F9F9;
+	border-radius: 3px;
+	padding-left: 5px;
+	color: #2E2E2E;
+	width: 100px;
+}
+
+.field-rows
+{
+	line-height: 45px;
+}
+
+.field-rows td
+{
+	border-bottom: 1px solid #CECECE;
+}
+
+.filter_year
+{
+	color: #747473;
+	padding-top: 0;
+	text-decoration: none;
+	-webkit-border-radius: 0px;
+	-moz-border-radius: 0px;
+	font-weight: bold;
+	font-family: arial;
+	font-size: 12px;
+	height: 30px;
+	line-height: 30px;
+	background: none;
+	border: 1px solid #CECECE;
+	text-align: center;
+	width: 60px;
+	cursor: pointer;
+}
+
+.filter_year.active 
+{
+	background-color: #F0EDE7;
+	color: #454544;
+	border: 1px solid #CECECE;
+	text-shadow: 0px 1px 0px white;
+	cursor: default;
+}
+
+#form1-table
+{
+	border-collapse: collapse;
+	font-family: Calibri;
+	font-size: 14px;
+	width: 100%;
+	color: #747473;
+	font-weight: bold;
+}
+
+#first-row
+{
+	line-height: 40px;
+}
+
+#fulltime_tab
+{
+	left: 150px;	
+}
+
+#header_div
+{
+	background-color: #E8E8E8;
+	height: 50px;
+}
+
+html, body, div#scheduler_here
+{
+    margin:0px;
+    padding:0px;
+    height:100%;
+    overflow:hidden;
+}
+
+.lightbox-buttons
+{
+	padding: 8px 20px;
+	font-weight: bold;
+	border-radius: 5px;
+	font-family: Calibri;
+	font-size: 14px;
+	border: 1px solid #CECECE;
+}
+
+#postgrad_tab
+{
+	left: 455px;
+	width: 60px;
+	border-top-right-radius: 5px;
+	border-bottom-right-radius: 5px;
+}
+
+#save-btn
+{
+	background-color: #22A1BC;
+	color: white;
+	text-shadow: 0px -1px 0px #6F6F6F;
+}
+
+#search_exam
+{
+	padding-left: 10px;
+	position: absolute;
+	top: 12px;
+	margin: 0 auto;
+	width: 500px;
+	left: 400px;
+	border-radius: 5px;
+	height: 20px;
+	background-color: white;
+	background-image: url("../images/search.png");
+	background-repeat: no-repeat;
+	background-position: right;
+}
+
+#span-dash
+{
+	font-size:20px;
+	padding-left:20px;
+	padding-right:20px;
+}
+
+#studyunit_code
+{
+	margin-right:20px;
+}
+
+#studyunit_title, #room
+{
+	width: 91%;
+}
+
+#switch_years_div
+{
+	position: absolute;
+	top: 0px;
+	left: 640px;
+}
+
+.ui-corner-all
+{
+    -moz-border-radius: 4px 4px 4px 4px;
+}
+
+.ui-menu
+{
+    display: block;
+    float: left;
+    list-style: none outside none;
+    margin: 0;
+    padding: 2px;
+}
+
+.ui-autocomplete
+{
+    cursor: default;
+    position: absolute;
+}
+
+.ui-menu .ui-menu-item
+{
+    clear: left;
+    float: left;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+.ui-menu .ui-menu-item a
+{
+    display: block;
+    padding: 3px 3px 3px 3px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'Calibri';
+}
+
+#view_as
+{
+	left: 210px;
+	position: absolute;
+	top: 17px;
+	height: 20px;
+	padding-right: 30px;
+	padding-left: 10px;
+	background: url("../images/search.png") top right no-repeat;
+}
+
+#year1_tab
+{
+	left: 211px;
+	border-radius: 0;	
+}
+
+#year2_tab
+{
+	left: 272px;
+	border-radius: 0;
+}
+
+#year3_tab
+{
+	left: 333px;
+	border-radius: 0;
+}
