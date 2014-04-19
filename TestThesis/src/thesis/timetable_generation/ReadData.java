@@ -1,19 +1,31 @@
 package thesis.timetable_generation;
 
+import helpers.FileHelper;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.StringTokenizer;
+import java.util.TreeMap;
+
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import entities.Student;
 import entities.StudentExams;
@@ -22,28 +34,23 @@ import entities.StudyUnit;
 public class ReadData 
 {
 	private int semester;
-	private String experimentsFilePath;
-	
-	private HashMap<Integer, Integer> indexStudentID = new HashMap<Integer, Integer>();
-	private static HashMap<Integer, Integer> indexExamID = new HashMap<Integer, Integer>();
+
+	private TreeMap<Integer, String> studentIDMap = new TreeMap<Integer, String>();
+	private TreeMap<Integer, Integer> indexStudentID = new TreeMap<Integer, Integer>();
 	
 	private HashMap<Integer, ArrayList<Integer>> studentExams = new HashMap<Integer, ArrayList<Integer>>();
 	private ArrayList<StudyUnit> studyUnits = new ArrayList<StudyUnit>();
-	
-	//private HashMap<String, ArrayList<StudyUnit>> studyUnits = new HashMap<String, ArrayList<StudyUnit>>();
 	
 	public ReadData(int semester)
 	{
 		this.semester = semester;
 	}
-		
-	public ReadData(String experimentsFilePath, int semester)
-	{
-		this.experimentsFilePath = experimentsFilePath;
-		this.semester = semester;
+	
+	public TreeMap<Integer, String> getStudentIDMap() {
+		return studentIDMap;
 	}
 	
-	public HashMap<Integer, Integer> getIndexStudentID() {
+	public TreeMap<Integer, Integer> getIndexStudentID() {
 		return indexStudentID;
 	}
 
@@ -51,41 +58,56 @@ public class ReadData
 		return studyUnits;
 	}
 	
-	public static HashMap<Integer, Integer> getIndexExamID() {
-		return indexExamID;
-	}
-	
 	// get experiment data
-	public List<List<String>> getExperimentData()
+	public GAParameters getGAParameters()
 	{
 		BufferedReader bufRdr = null;
-		List<List<String>> experiments = null;  
-
+		ArrayList<String> parameters = null;  
+		GAParameters gaParameters = null;
+		
 		try
 		{
-			File file = new File(experimentsFilePath);
+			File file = new File("C://Users//Bernice//Desktop//GA Parameters.csv");
 	    	
 			if (file.exists())
 			{
 				bufRdr = new BufferedReader(new FileReader(file));
-				experiments = new ArrayList<List<String>>();
+				parameters = new ArrayList<String>();
 		    	String line = null;
 		    	
 		    	while ((line = bufRdr.readLine()) != null)
 		    	{
 		    		StringTokenizer st = new StringTokenizer(line, ",");
-		    		ArrayList<String> experiment = new ArrayList<String>(); 
 		    		
 		    		while (st.hasMoreTokens())
 		    		{
 		    			String next_arg = st.nextToken();
 		    			
 		    			if (!next_arg.trim().equals(""))
-		    				experiment.add(next_arg.trim());
+		    				parameters.add(next_arg.trim());
 		    		}
-		    		experiments.add(experiment);
-		    	}
+				}
 			}
+			
+			gaParameters = new GAParameters();
+			
+			gaParameters.setCrossoverType(Integer.parseInt(parameters.get(0)));
+			gaParameters.setCrossoverRate(Double.parseDouble(parameters.get(1)));
+			gaParameters.setMutationRate(Double.parseDouble(parameters.get(2)));
+			gaParameters.setInverseSquarePressure(Integer.parseInt(parameters.get(3)));
+			gaParameters.setNoOfGenerations(Integer.parseInt(parameters.get(4)));
+			gaParameters.setNoOfChromosomes(Integer.parseInt(parameters.get(5)));
+			gaParameters.setElitistSelection(Integer.parseInt(parameters.get(6)));
+			gaParameters.setRandomIntroduction(Integer.parseInt(parameters.get(7)));
+			gaParameters.setInterpolatingRates(Integer.parseInt(parameters.get(8)));
+			gaParameters.setMinCrossoverRate(Double.parseDouble(parameters.get(9)));
+			gaParameters.setMaxMutationRate(Double.parseDouble(parameters.get(10)));
+			gaParameters.setStepValue(Double.parseDouble(parameters.get(11)));
+			gaParameters.setClashPunishment(Integer.parseInt(parameters.get(12)));
+			gaParameters.setSameDayPunishment(Integer.parseInt(parameters.get(13)));
+			gaParameters.setTwoDaysPunishment(Integer.parseInt(parameters.get(14)));
+			gaParameters.setThreeDaysPunishment(Integer.parseInt(parameters.get(15)));
+			
 		}
 		catch (Exception e)
 		{
@@ -102,7 +124,28 @@ public class ReadData
 				System.out.println(e2.getMessage());
 			}
 		}
-		return experiments;
+		return gaParameters;
+	}
+	
+	public static Date getDateFromInput(String inputDate)
+	{
+		SimpleDateFormat df = new SimpleDateFormat("dd/MM/yyyy");  
+        Date testDate = null;  
+	    
+		try
+        {
+			df.setLenient(false);
+			testDate = df.parse(inputDate);
+        }
+		catch (ParseException e)
+        { 
+        	System.out.println("Invalid Format " + e.getMessage());
+        }  
+          
+        if (!df.format(testDate).equals(inputDate)) 
+            return null;
+        else  
+            return testDate;
 	}
 	
 	public static <T, E> T getKeyByValue(Map<T, E> map, E value) {
@@ -114,6 +157,80 @@ public class ReadData
 	    return null;
 	}
 	
+	public int getTimeslotNoExamMoved(TreeMap<Integer, Timeslot> timeslotMap, Timeslot timeslotMoved) {
+		
+		int timeslotNo = -1;
+		DateTimeFormatter formatter = DateTimeFormat.forPattern("dd/MM/yyyy HH:mm");
+		
+		String startDate = timeslotMoved.getStartDate();
+		String endDate = timeslotMoved.getEndDate();
+		
+		DateTime startDateMoved = formatter.parseDateTime(startDate);
+		DateTime endDateMoved = formatter.parseDateTime(endDate);
+				
+		for (Entry<Integer, Timeslot> entry : timeslotMap.entrySet())
+		{
+			Timeslot timeslot = entry.getValue();
+			DateTime startDateThis = formatter.parseDateTime(timeslot.getStartDate());
+			DateTime endDateThis = formatter.parseDateTime(timeslot.getEndDate());
+			
+			Interval intervalMoved = new Interval(startDateMoved, endDateMoved);
+			Interval intervalThis = new Interval(startDateThis, endDateThis);
+
+			boolean overlaps = intervalMoved.overlaps(intervalThis);
+			
+			if (startDateMoved.isEqual(startDateThis) || overlaps)
+			{
+				timeslotNo = entry.getKey();
+				break;
+			}
+		}
+		
+		return timeslotNo;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static TreeMap<Integer, Integer> getIndexExamId()
+	{
+		ObjectInputStream inputStream = null;
+		TreeMap<Integer, Integer> indexExamID = null;
+		
+		try
+		{
+			inputStream = FileHelper.getObjectReader("indexExamID.data");
+			indexExamID = (TreeMap<Integer, Integer>) inputStream.readObject();
+		}
+		catch (Exception e)
+		{
+			System.out.println("[ReadData.getIndexExamId()]: " + e.getMessage());
+		}
+		finally
+		{
+			FileHelper.closeInputStream(inputStream);
+		}
+		
+		return indexExamID;
+	}
+	
+	public void saveIndexExamId(TreeMap<Integer, Integer> indexExamID)
+	{
+		ObjectOutputStream outputStream = null;
+		
+		try
+		{
+			outputStream = FileHelper.getObjectWriter("indexExamID.data");
+			outputStream.writeObject(indexExamID);
+		}
+		catch (IOException e)
+		{
+			System.out.println("[ReadData.saveIndexExamId()]: " + e.getMessage());
+		}
+		finally
+		{
+			FileHelper.closeOutputStream(outputStream);
+		}
+	}
+	
 	public void mapExamIndexes(Connection conn)
 	{
 		//SELECT DISTINCT st.*
@@ -122,6 +239,7 @@ public class ReadData
 		//WHERE st.semester = '1' AND st.evening = 'false';
 		StringBuffer query = null; 
 		Statement stmt = null;
+		TreeMap<Integer, Integer> indexExamID = new TreeMap<Integer, Integer>();
 		
 		try
 		{
@@ -165,12 +283,14 @@ public class ReadData
 				short credits = rs.getShort(StudyUnit.FLD_CREDITS);
 				boolean evening = rs.getBoolean(StudyUnit.FLD_EVENING);
 				String venue = rs.getString(StudyUnit.FLD_VENUE);
-			
+				
 				StudyUnit studyUnit = new StudyUnit(unitcode, title, year, semester, examLength, noOfStudents, department, credits, evening, venue);
 				studyUnits.add(studyUnit);
 				
 				count++;
 			}
+			
+			saveIndexExamId(indexExamID);
 		}
 		catch (SQLException e)
 		{
@@ -251,7 +371,8 @@ public class ReadData
 			query.append(StudyUnit.FLD_ID);
 			query.append(" AS 'ExamID', s.");
 			query.append(Student.FLD_ID);
-			query.append(" AS 'StudID'");
+			query.append(" AS 'StudID', s.");
+			query.append(Student.FLD_STUDENTID);
 			query.append("\nFROM ");
 			query.append(StudentExams.TBL_STUDENTEXAMS);
 			query.append(" se \nJOIN ");
@@ -288,18 +409,23 @@ public class ReadData
 			while (rs.next())
 			{
 				int studentID = rs.getInt("StudID");
+				String studentIdNumber = rs.getString(Student.FLD_STUDENTID);
+				
+				studentIDMap.put(studentID, studentIdNumber);
+				
 				int examID = rs.getInt("ExamID");
+				TreeMap<Integer, Integer> indexExamId = getIndexExamId();
 				
 				if (lastStudentID != studentID && lastStudentID != -1)
 				{
 					studentExams.put(lastStudentID, examList);
 					
 					examList = new ArrayList<Integer>();
-					examList.add(indexExamID.get(examID));
+					examList.add(indexExamId.get(examID));
 				}
 				else
 				{
-					examList.add(indexExamID.get(examID));
+					examList.add(indexExamId.get(examID));
 				}
 				lastStudentID = studentID;
 			}

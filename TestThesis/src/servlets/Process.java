@@ -1,9 +1,9 @@
 package servlets;
 
 import java.io.IOException;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.TreeMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -11,15 +11,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import thesis.timetable_generation.GeneticAlgorithm;
+import thesis.timetable_generation.InputParameters;
 import thesis.timetable_generation.ReadData;
+import thesis.timetable_generation.Timeslot;
 
 public class Process extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
-	private static ArrayList<String> parameters;
-	private static List<List<String>> experiments;   
-	private static ReadData datafile = null;
-	
     public Process() {
         super();
     }
@@ -29,56 +27,92 @@ public class Process extends HttpServlet {
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		
-		String semester = request.getParameter("semester");
-		String noOfWkDays = request.getParameter("noOfWkDays");
-		String noOfSaturdays = request.getParameter("noOfSats");
+		InputParameters param = new InputParameters();
 		
 		String startdate = request.getParameter("startdate");
-		String desktopPath = "C://Users//Bernice//Desktop//";
+		Date startDate = ReadData.getDateFromInput(startdate);
+		param.setStartDate(startDate);
 		
-		datafile = new ReadData(desktopPath + "GA Parameters.csv", Integer.parseInt(semester));
-		experiments = datafile.getExperimentData();
-
-		GeneticAlgorithm ga = null;
+		Date endDate = ReadData.getDateFromInput(request.getParameter("enddate"));
+		param.setEndDate(endDate);
 		
-		try
-		{
-			 ga = new GeneticAlgorithm(datafile,
-									   startdate,
-									   Integer.parseInt(noOfWkDays.trim()), 
-									   Integer.parseInt(noOfSaturdays.trim()));				
-		}
-		catch (ParseException e)
-		{
-			System.out.println(e.getMessage());
-		}
+		Calendar c = Calendar.getInstance();
+		c.setTime(startDate);
+		int month = c.get(Calendar.MONTH);
 		
-		// for each experiment
-		for (int i=0; i < experiments.size(); i++)
+		int semester = 0;
+		if (month == Calendar.JANUARY || month == Calendar.FEBRUARY)
+			semester = 1;
+		else if (month == Calendar.MAY || month == Calendar.JUNE)
+			semester = 2;
+		
+		param.setSemester(semester); 
+		
+		String[] includeSaturdays = request.getParameterValues("include_sats");
+		
+		if (includeSaturdays != null)
+			param.setIncludeSaturdays(true);
+		else
+			param.setIncludeSaturdays(false);
+		
+		String[] sameWeekdays = request.getParameterValues("same_weekdays");
+		
+		if (sameWeekdays != null)
+			param.setSameWeekdays(true);
+		else
+			param.setSameWeekdays(false);
+		
+		int weekdayTimeslots = Integer.parseInt(request.getParameter("weekday_ts"));
+		param.setWeekdayTimeslots(weekdayTimeslots);
+		
+		int saturdayTimeslots = Integer.parseInt(request.getParameter("saturday_ts"));
+		param.setSaturdayTimeslots(saturdayTimeslots);
+		
+		if (!param.isSameWeekdays())
 		{
-			parameters = (ArrayList<String>) experiments.get(i);
-			try
+			String monParam = request.getParameter("monday_ts");
+			if (monParam != null)
 			{
-				ga.setCrossoverType(Integer.parseInt(parameters.get(0)));
-				ga.setCrossoverRate(Double.parseDouble(parameters.get(1)));
-				ga.setMutationRate(Double.parseDouble(parameters.get(2)));
-				ga.setInverseSqPress(Integer.parseInt(parameters.get(3)));
-				ga.setNoOfGenerations(Integer.parseInt(parameters.get(4)));
-				ga.setNoOfChromosomes(Integer.parseInt(parameters.get(5)));
-				ga.setElitistSelection(Integer.parseInt(parameters.get(6)));
-				ga.setRandomIntroduction(Integer.parseInt(parameters.get(7)));
-				ga.setInterpolatingRates(Integer.parseInt(parameters.get(8)));
-			}
-			catch (NumberFormatException e)
-			{
-				e.printStackTrace();
+				int mondayTimeslots = Integer.parseInt(monParam);
+				param.setMondayTimeslots(mondayTimeslots); 
 			}
 			
-			ga.generateTimeslotMaps();
-			ga.initGA(); // initialize student and exams arrays
-			int[] timetable = ga.runGA(); // run GA
-			ga.insertTimetableEvents(timetable); // decode timetable and insert events in database
+			String tueParam = request.getParameter("tuesday_ts");
+			if (tueParam != null)
+			{
+				int tuesdayTimeslots = Integer.parseInt(tueParam);
+				param.setTuesdayTimeslots(tuesdayTimeslots); 
+			}
+			
+			String wedParam = request.getParameter("wednesday_ts");
+			if (wedParam != null)
+			{
+				int wednesdayTimeslots = Integer.parseInt(wedParam);
+				param.setWednesdayTimeslots(wednesdayTimeslots); 
+			}
+			
+			String thursParam = request.getParameter("thursday_ts");
+			if (thursParam != null)
+			{
+				int thursdayTimeslots = Integer.parseInt(thursParam);
+				param.setThursdayTimeslots(thursdayTimeslots);
+			}
+			
+			String friParam = request.getParameter("friday_ts");
+			if (friParam != null)
+			{
+				int fridayTimeslots = Integer.parseInt(friParam);
+				param.setFridayTimeslots(fridayTimeslots); 
+			}
 		}
+		
+		ReadData datafile = new ReadData(semester);
+		GeneticAlgorithm ga = new GeneticAlgorithm(datafile, startDate, endDate);
+		TreeMap<Integer, Timeslot> timeslotMap = ga.setTimeslotMap(request, c, param);
+		ga.saveTimeslotMap(timeslotMap);
+		ga.initGA(); // initialize student and exams arrays
+		int[] bestTimetable = ga.runGA();  // run GA
+		ga.insertTimetableEvents(bestTimetable); // save timetable
 		
 		// redirects to calendar view
 		response.sendRedirect("timetable.jsp?startdate=" + startdate);

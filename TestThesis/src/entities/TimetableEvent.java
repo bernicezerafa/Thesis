@@ -242,4 +242,39 @@ public class TimetableEvent {
 		
 		return eventID;
 	}
+	
+	public static String getEventStart(Connection conn, String eventID)
+	{
+		StringBuffer query = null;
+		Statement stmt = null;
+		String startDate = null;
+		
+		try {
+   			
+   	    	query = new StringBuffer();
+   	    	
+   	    	query.append("SELECT ");
+   	    	query.append(FLD_STARTDATE);
+   	    	query.append("\nFROM ");
+   			query.append(TBL_EVENTS);
+   			query.append("\nWHERE ");			
+   			query.append(FLD_ID);
+   			query.append(" = '");
+   			query.append(eventID);
+   			query.append("'");
+   			
+   			stmt = conn.createStatement();
+   	    	ResultSet rs = stmt.executeQuery(query.toString());
+
+   	    	while (rs.next()) {
+   	    		startDate = rs.getString(FLD_STARTDATE);
+   	    	}
+   	    	
+   	    } catch (SQLException e) {
+      		System.out.println("[TimetableEvent.getEventStart(String eventID)]: " + e.getMessage());
+        
+   	    }
+		
+		return startDate;
+	}
 }

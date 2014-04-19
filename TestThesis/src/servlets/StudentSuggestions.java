@@ -36,12 +36,13 @@ public class StudentSuggestions extends HttpServlet {
 		
 		if (query != null)
 		{
-			ArrayList<String> studentIds = Student.getStudentSuggestions(conn, query);				
+			ArrayList<String> studentIds = Student.getStudentSuggestions(conn, query);		
+			
 			JSONObject jo = new JSONObject();
 			
 			for (int i=0; i<studentIds.size(); i++)
 			{
-				jo.put(Integer.toString(i), studentIds.get(i));
+				jo.put(Integer.toString(i), studentIds.get(i).substring(0, studentIds.get(i).indexOf("/")));
 			}
 			
 			response.setContentType("application/json");

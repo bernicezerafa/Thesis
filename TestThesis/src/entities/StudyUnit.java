@@ -341,7 +341,11 @@ public class StudyUnit {
 			query.append(FLD_UNITCODE);
 			query.append(" LIKE '");
 			query.append(pattern);
-			query.append("%'");
+			query.append("%' AND ");
+			query.append(FLD_EVENING);
+			query.append(" = '");
+			query.append(false);
+			query.append("'");
 			
 			stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(query.toString());

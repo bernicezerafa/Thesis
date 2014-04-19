@@ -115,9 +115,9 @@ public class EventsManager extends DHXEventsManager {
    	    		query.append(StudentExams.FLD_UNITCODE);
    	    		query.append("\nWHERE s.");
    	    		query.append(StudentExams.FLD_STUDENTID);
-   	    		query.append(" = '");
+   	    		query.append(" LIKE '");
    	    		query.append(studentID);
-   	    		query.append("'");
+   	    		query.append("%'");
    	    	}
    	    	
    	    	ResultSet rs = statement.executeQuery(query.toString());

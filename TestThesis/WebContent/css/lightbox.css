@@ -14,7 +14,7 @@
 	overflow: hidden; 
 }
 
-.autocomplete-selected 
+.autocomplete-selected
 { 
 	background: #f0f0f0; 
 }
@@ -56,14 +56,14 @@
 	border: 2px outset gray;
 	padding: 10px;
 	width: 510px;
-	height: 380px;
+	height: 425px;
 }
 
 #create_btn
 {
-	position: absolute;
-	top: 5px;
-	left: 50px;
+	float: left;
+	margin-top: 7px;
+	margin-left: 20px;
 	background-color: #22A1BC;
 	color: white;
 	text-shadow: 0px -1px 0px #6F6F6F;
@@ -125,9 +125,15 @@ div.ui-datepicker
  	font-size:10px;
 }
 
-#end_date
+#endtime
 {
 	margin-left:0px;
+}
+
+#enrolled-students
+{
+	visibility:hidden;
+	line-height:0px;
 }
 
 #evening_tab
@@ -137,13 +143,20 @@ div.ui-datepicker
 	border-radius: 0px;
 }
 
-.event_colour
+#export_pdf
 {
-	background: #1796b0
+	float: right;
+	margin-right: 20px;
+	margin-top: 7px;
+	color: white;
+	background-color: #FF9933;
+	text-shadow: 0px -1px 0px #6F6F6F;
 }
 
 .field-elements
 {
+	font-family: Calibri;
+	font-size: 16px;
 	margin-left: 10px;
 	border: 1px solid #CECECE;
 	background-color: #F9F9F9;
@@ -261,9 +274,6 @@ html, body, div#scheduler_here
 	border-radius: 5px;
 	height: 20px;
 	background-color: white;
-	background-image: url("../images/search.png");
-	background-repeat: no-repeat;
-	background-position: right;
 }
 
 #span-dash
@@ -271,6 +281,16 @@ html, body, div#scheduler_here
 	font-size:20px;
 	padding-left:20px;
 	padding-right:20px;
+}
+
+#starttime, #endtime
+{
+	width:80px;
+}
+
+#starttime
+{
+	margin-left:28px;	
 }
 
 #studyunit_code
@@ -337,7 +357,7 @@ html, body, div#scheduler_here
 	height: 20px;
 	padding-right: 30px;
 	padding-left: 10px;
-	background: url("../images/search.png") top right no-repeat;
+	border-radius: 5px;
 }
 
 #year1_tab

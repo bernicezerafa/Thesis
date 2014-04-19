@@ -1,4 +1,0 @@
-Thesis
-======
-
-Exam Scheduling GA
