@@ -2,9 +2,9 @@ package thesis.timetable_generation;
 
 import java.io.Serializable;
 
-@SuppressWarnings("serial")
 public class Timeslot implements Serializable {
 	
+	private static final long serialVersionUID = 1L;
 	private String startDate;
 	private String endDate;
 	
@@ -28,6 +28,10 @@ public class Timeslot implements Serializable {
 	
 	public void setEndDate(String endDate) {
 		this.endDate = endDate;
+	}
+	
+	public String getEndTime() {
+		return endDate.substring(endDate.indexOf(" ") + 1, endDate.length());
 	}
 	
 	@Override

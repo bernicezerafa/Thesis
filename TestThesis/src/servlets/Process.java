@@ -1,9 +1,11 @@
 package servlets;
 
+import helpers.DateHelper;
+import helpers.FileHelper;
+
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.TreeMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -12,8 +14,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import thesis.timetable_generation.GeneticAlgorithm;
 import thesis.timetable_generation.InputParameters;
-import thesis.timetable_generation.ReadData;
-import thesis.timetable_generation.Timeslot;
 
 public class Process extends HttpServlet {
 	private static final long serialVersionUID = 1L;
@@ -30,10 +30,10 @@ public class Process extends HttpServlet {
 		InputParameters param = new InputParameters();
 		
 		String startdate = request.getParameter("startdate");
-		Date startDate = ReadData.getDateFromInput(startdate);
+		Date startDate = DateHelper.getDateFromInput(startdate);
 		param.setStartDate(startDate);
 		
-		Date endDate = ReadData.getDateFromInput(request.getParameter("enddate"));
+		Date endDate = DateHelper.getDateFromInput(request.getParameter("enddate"));
 		param.setEndDate(endDate);
 		
 		Calendar c = Calendar.getInstance();
@@ -106,12 +106,12 @@ public class Process extends HttpServlet {
 			}
 		}
 		
-		ReadData datafile = new ReadData(semester);
-		GeneticAlgorithm ga = new GeneticAlgorithm(datafile, startDate, endDate);
-		TreeMap<Integer, Timeslot> timeslotMap = ga.setTimeslotMap(request, c, param);
-		ga.saveTimeslotMap(timeslotMap);
+		FileHelper.saveInputParameters(param);
+		
+		GeneticAlgorithm ga = new GeneticAlgorithm(startDate, endDate, semester);
+		ga.setTimeslotMap(request, c, param);
 		ga.initGA(); // initialize student and exams arrays
-		int[] bestTimetable = ga.runGA();  // run GA
+		Integer[] bestTimetable = ga.startGeneticAlgorithm().getChromosome();  // run GA
 		ga.insertTimetableEvents(bestTimetable); // save timetable
 		
 		// redirects to calendar view
@@ -124,5 +124,4 @@ public class Process extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		// TODO Auto-generated method stub
 	}
-
 }

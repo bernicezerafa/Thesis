@@ -2,8 +2,9 @@ package thesis.timetable_generation;
 
 import java.io.Serializable;
 
-@SuppressWarnings("serial")
 public class GAParameters implements Serializable {
+	
+	private static final long serialVersionUID = 1L;
 	
 	private double crossoverRate;
 	private double mutationRate;
@@ -17,9 +18,13 @@ public class GAParameters implements Serializable {
 	private int inverseSquarePressure;
 	
 	private int clashPunishment; 
+	private int eveningPunishment;
 	private int samedayPunishment; 
 	private int twodaysPunishment; 
 	private int threedaysPunishment;
+	private int spreadOutPunishment;
+	private int noOfStudentsPunishment;
+	private int twentyHourPunishment;
 	
 	private double minCrossoverRate;
 	private double maxMutationRate;
@@ -97,6 +102,14 @@ public class GAParameters implements Serializable {
 		this.clashPunishment = clashPunishment;
 	}
 
+	public int getEveningPunishment() {
+		return eveningPunishment;
+	}
+
+	public void setEveningPunishment(int eveningPunishment) {
+		this.eveningPunishment = eveningPunishment;
+	}
+	
 	public int getSameDayPunishment() {
 		return samedayPunishment;
 	}
@@ -119,6 +132,30 @@ public class GAParameters implements Serializable {
 
 	public void setThreeDaysPunishment(int threedaysPunishment) {
 		this.threedaysPunishment = threedaysPunishment;
+	}
+
+	public int getSpreadOutPunishment() {
+		return spreadOutPunishment;
+	}
+
+	public void setSpreadOutPunishment(int spreadOutPunishment) {
+		this.spreadOutPunishment = spreadOutPunishment;
+	}
+	
+	public int getNoOfStudentsPunishment() {
+		return noOfStudentsPunishment;
+	}
+
+	public void setNoOfStudentPunishment(int noOfStudentsPunishment) {
+		this.noOfStudentsPunishment = noOfStudentsPunishment;
+	}
+	
+	public int getTwentyHourPunishment() {
+		return twentyHourPunishment;
+	}
+
+	public void setTwentyHourPunishment(int twentyHourPunishment) {
+		this.twentyHourPunishment = twentyHourPunishment;
 	}
 
 	public double getMinCrossoverRate() {

@@ -1,3 +1,68 @@
+.accordion_div
+{
+	height: 250px;
+}
+
+.accordion_div_details
+{
+	height: 220px;
+}
+
+.accordion_div_details p
+{
+	text-align: justify;
+}
+
+.accordion-elements
+{
+	width: 150px !important;
+}
+
+#add_drop_section
+{
+	display: none;
+	position: absolute;
+	z-index: 10001;
+	display: none;
+	background-color: white;
+	border: 2px outset gray;
+	padding: 10px;
+	width: 500px;
+	height: 350px;
+	top: 160px;
+	left: 400px;
+}
+
+#add_drop_btn, #add_students_btn
+{
+	background-color: #22A1BC;
+	color: white;
+	text-shadow: 0px -1px 0px #6F6F6F;
+}
+
+#cancel_add_drop_btn, #cancel_edit_students_btn
+{
+	color: #454544;
+	background-color: white;
+}
+
+#add_drop_button_div
+{
+	position: absolute;
+	bottom: 10px;
+	width: 500px;
+	text-align: right;
+}
+
+#addDropStudents
+{
+	float: right;
+    margin-top: 8px;
+    margin-right: 10px;
+    color: white;  
+    background-color: #22A1BC;  text-shadow: 0px -1px 0px #6F6F6F;
+}
+
 .autocomplete-suggestions 
 { 
 	border: 1px solid #999; 
@@ -39,9 +104,31 @@
 	bottom: 9px;
 }
 
+#button-div-details
+{
+	width: 97.7%;
+	position: absolute;
+	bottom: 9px;
+}
+
 #cancel-btn
 {
 	color: #454544;
+	background-color: white;
+}
+
+#choose_student
+{
+	margin-top: 15px;
+	padding: 5px;
+	border-radius: 5px;
+	border-color: ghostwhite;
+}
+
+#confirm_student
+{
+	padding: 5px;
+	color: #454544;	
 	background-color: white;
 }
 
@@ -120,20 +207,69 @@
 	color: black !important;
 }
 
+#dialog-add-drop
+{
+	display: none;	
+	font-size: 0.7em;
+	text-align: justify;
+}
+
+#dialog-move-confirm
+{
+	display: none;	
+	font-size: 0.7em;
+	text-align: justify;
+}
+
 div.ui-datepicker
 {
- 	font-size:10px;
+ 	font-size: 10px;
+}
+
+#done_report
+{
+	color: #454544;
+	background-color: white;
+	float: right;
 }
 
 #endtime
 {
-	margin-left:0px;
+	margin-left: 0px;
 }
 
 #enrolled-students
 {
-	visibility:hidden;
-	line-height:0px;
+	visibility: hidden;
+	line-height: 0px;
+}
+
+#enrolled_students
+{
+	font-size: 0.7em;
+}
+
+#edit_students_section
+{
+	display: none;
+	position: absolute;
+	z-index: 10002;
+	background-color: white;
+	border: 2px outset gray;
+	padding: 10px;
+	width: 460px;
+	height: 200px;
+	top: 220px;
+	left: 400px;
+	font-family: Calibri;
+}
+
+#edit_students_button_div
+{
+	position: absolute;
+	bottom: 10px;
+	width: 450px;
+	text-align: right;
 }
 
 #evening_tab
@@ -248,6 +384,19 @@ html, body, div#scheduler_here
 	border: 1px solid #CECECE;
 }
 
+#overlay_div
+{
+	display: none;
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	z-index: 10000;
+	top: 0px;
+	left: 0px;
+	background-color: black;
+	opacity: 0.1;
+}
+
 #postgrad_tab
 {
 	left: 455px;
@@ -267,13 +416,37 @@ html, body, div#scheduler_here
 {
 	padding-left: 10px;
 	position: absolute;
-	top: 12px;
+	top: 10px;
 	margin: 0 auto;
 	width: 500px;
 	left: 400px;
 	border-radius: 5px;
 	height: 20px;
 	background-color: white;
+}
+
+#show_details_section
+{
+	display: none;
+	position: absolute;
+	z-index: 10001;
+	display: none;
+	background-color: white;
+	border: 2px outset gray;
+	padding: 10px;
+	width: 800px;
+	height: 500px;
+	top: 90px;
+	left: 240px;
+}
+
+#showstats_btn
+{
+	margin-left: 10px;
+	margin-top: 7px;
+	color: white;
+	background-color: #FF9933;
+	text-shadow: 0px -1px 0px #6F6F6F;	
 }
 
 #span-dash
@@ -303,6 +476,16 @@ html, body, div#scheduler_here
 	width: 91%;
 }
 
+.summary_report
+{
+	float: right;
+}
+
+#switch_divs, #switch_divs_details
+{
+	font-size: 0.7em;
+}
+
 #switch_years_div
 {
 	position: absolute;
@@ -310,9 +493,29 @@ html, body, div#scheduler_here
 	left: 640px;
 }
 
+#refresh_btn
+{
+	margin-left: 7px;  
+	margin-top: 7px;  
+    color: #454544;  
+    background-color: white;
+}
+
+.ui-autocomplete 
+{ 
+	position: absolute; 
+	cursor: default;
+	z-index: 10002 !important;
+}  
+
 .ui-corner-all
 {
     -moz-border-radius: 4px 4px 4px 4px;
+}
+
+.ui-dialog, .ui-dialog-title, .ui-dialog-buttonpane
+{
+    font-size: 0.7em;    
 }
 
 .ui-menu
@@ -349,11 +552,27 @@ html, body, div#scheduler_here
     font-family: 'Calibri';
 }
 
+#units_choice
+{
+	-webkit-appearance: textfield;
+	padding: 1px;
+	background-color: white;
+	border: 2px inset;
+	border-image-source: initial;
+	border-image-slice: initial;
+	border-image-width: initial;
+	border-image-outset: initial;
+	border-image-repeat: initial;
+	-webkit-rtl-ordering: logical;
+	-webkit-user-select: text;
+	cursor: auto;
+}
+
 #view_as
 {
 	left: 210px;
 	position: absolute;
-	top: 17px;
+	top: 15px;
 	height: 20px;
 	padding-right: 30px;
 	padding-left: 10px;

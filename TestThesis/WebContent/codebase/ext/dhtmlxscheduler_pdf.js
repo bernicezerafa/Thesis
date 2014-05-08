@@ -334,6 +334,8 @@
 		document.getElementById(uid).firstChild.value = encodeURIComponent(xml);
 		document.getElementById(uid).submit();
 		d.parentNode.removeChild(d);
+		
+		console.log(xml);
 	}
 
 	scheduler.toPDF = function(url, mode, header, footer) {
@@ -344,7 +346,8 @@
 			start = scheduler.templates.api_date(start);
 			end = scheduler.templates.api_date(end);
 		}
-
+		
+		console.log(arguments);
 		return to_pdf.apply(this, arguments);
 	};
 })();

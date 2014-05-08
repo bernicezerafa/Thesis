@@ -171,6 +171,12 @@
 			var includeSats = false;
 			var sameWeekdays = false;
 		
+			$(document).on(
+			{
+				ajaxStart: function() { $("body").addClass("loading"); },
+				ajaxStop: function() { $("body").removeClass("loading"); }    
+			});
+
 			$(document).ready(function()
 			{
 				$("#startdate, #enddate").datepicker(
@@ -236,7 +242,6 @@
 			{
 				showSetTime($(this).val(), "weekday_trs");
 			});
-			
 			
 		</script>
 	</body>

@@ -1,28 +1,28 @@
 package thesis.timetable_generation;
 
+import helpers.DateHelper;
 import helpers.FileHelper;
 import helpers.SQLHelper;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Scanner;
-import java.util.TreeMap;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeConstants;
 import org.joda.time.Days;
 import org.joda.time.Hours;
 import org.joda.time.Interval;
@@ -32,40 +32,47 @@ import org.joda.time.format.DateTimeFormatter;
 import com.dhtmlx.planner.DHXEv;
 import com.dhtmlx.planner.DHXEvent;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Multiset;
 import com.google.common.collect.Table;
-import com.google.common.primitives.Ints;
 
+import entities.ContemporaneousExams;
 import entities.StudyUnit;
 import entities.TimetableEvent;
 
 public class GeneticAlgorithm 
 {
 	private int noOfExams;
-
 	private int noOfTimeslots;
+	
+	private int noOfDayExams;
+	private int noOfEveningExams;
+	private int noOfEveningTimeslots;
+	private int noOfDayTimeslots;
+	
 	private int noOfChromosomes;
-	
-	private int clashPunishment;
-	private int sameDayPunishment;
-	private int twoDaysPunishment;
-	private int threeDaysPunishment;
-	
 	private double crossoverRate;
 	private double mutationRate;
 	
-	private int[][] population;
-	private int[][] studentsExams;
-	private Table<Integer, Integer, ArrayList<String>> clashesMatrix;
-
+	private Integer[][] population;	
 	private double[] fitness;
 	private double[] accumulatedFitness;
 	
 	private ReadData datafile = null;
-
+	private GAParameters gaParameters = null;
+	
+	private HashMap<IntTuple, ArrayList<String>> clashesMatrix = null;
+	
+	private HashMap<Integer, Timeslot> timeslotMap = null;
+	private HashMap<Integer, Integer> indexExamID = null;
+	private HashMap<Integer, Integer> eveningIndexExamID = null;
+	private Table<Integer, Integer, TemporalDifference> evalMatrix = null;
+	
 	private Date startDate = null;
 	private Date endDate = null;
+	private DateTime halfExamPeriod = null;
 	
-	private GAParameters gaParameters = null;
+	private DateTimeFormatter formatter = null;
+	private Hours twentyHrs = null;
 	
 	long startTime;
 	long endTime;
@@ -74,12 +81,55 @@ public class GeneticAlgorithm
 	
 	public GeneticAlgorithm() {
 		
+		readObjects();
+		
+		formatter = DateTimeFormat.forPattern("dd/MM/yyyy HH:mm");
+		twentyHrs = Hours.EIGHT.multipliedBy(2).plus(4);
+		
+		halfExamPeriod = formatter.parseDateTime(timeslotMap.get(noOfTimeslots / 2).getStartDate());
+		
+		InputParameters param = FileHelper.getInputParameters();
+		this.datafile = new ReadData(param.getSemester());
 	}
 	
-	public GeneticAlgorithm(ReadData datafile, Date startDate, Date endDate) {
-		this.datafile = datafile;
+	public GeneticAlgorithm(Date startDate, Date endDate, int semester) {
+		
+		this.datafile = new ReadData(semester);
 		this.startDate = startDate;
 		this.endDate = endDate;
+		
+		formatter = DateTimeFormat.forPattern("dd/MM/yyyy HH:mm");
+		twentyHrs = Hours.EIGHT.multipliedBy(2).plus(4);
+	}
+	
+	public HashMap<Integer, Timeslot> getTimeslotMap() {
+		return timeslotMap;
+	}
+
+	public HashMap<Integer, Integer> getIndexExamID() {
+		return indexExamID;
+	}
+
+	public HashMap<Integer, Integer> getEveningIndexExamID() {
+		return eveningIndexExamID;
+	}
+	
+	public void readObjects() {
+		
+		timeslotMap = FileHelper.getTimeslotMap();
+		clashesMatrix = FileHelper.getClashesMatrix();
+		gaParameters = FileHelper.getGAParameters();
+		indexExamID = FileHelper.getIndexExamId();	
+		eveningIndexExamID = FileHelper.getEveningIndexExamId();
+		evalMatrix = FileHelper.getEvalMatrix();
+		
+		InputParameters param = FileHelper.getInputParameters();
+		noOfTimeslots = param.getNoOfTimeslots();
+		noOfDayTimeslots = param.getNoOfDayTimeslots();
+		noOfDayExams = param.getNoOfDayExams();
+		noOfEveningExams = param.getNoOfEveningExams();
+		noOfEveningTimeslots = param.getNoOfEveningTimeslots();
+		noOfExams = noOfDayExams + noOfEveningExams;
 	}
 	
 	public int getNoOfTimeslots() {
@@ -89,70 +139,101 @@ public class GeneticAlgorithm
 	public void initGA()
 	{
 		// set GA parameters used throughout most methods
-		gaParameters = datafile.getGAParameters();
+		if (gaParameters == null)
+			gaParameters = datafile.getGAParameters();
+		
 		noOfChromosomes = gaParameters.getNoOfChromosomes();
-		
-		clashPunishment = gaParameters.getClashPunishment();
-		sameDayPunishment = gaParameters.getSameDayPunishment();
-		twoDaysPunishment = gaParameters.getTwoDaysPunishment();
-		threeDaysPunishment = gaParameters.getThreeDaysPunishment();
-		
 		mutationRate = gaParameters.getMutationRate();
 		crossoverRate = gaParameters.getCrossoverRate();
 		
-		population = new int[noOfChromosomes][noOfExams];
+		// init arrays for population fitness and accumulated fitness
+		population = new Integer[noOfChromosomes][noOfExams];
 		fitness = new double[noOfChromosomes];
 		accumulatedFitness = new double[noOfChromosomes];
 		
 		// get student exams relationship from database
 		Connection conn = SQLHelper.getConnection();
-		studentsExams = datafile.getAllStudentExams(conn);
-		noOfExams = datafile.getNoOfExams(conn);
+		constructClashesMatrix(conn, true);
 		
-		clashesMatrix = HashBasedTable.create();
-		TreeMap<Integer, String> studentIDMap = datafile.getStudentIDMap();
-    	TreeMap<Integer, Integer> indexStudentID = datafile.getIndexStudentID();
+    	FileHelper.saveGAParameters(gaParameters);		
+    	timeslotMap = FileHelper.getTimeslotMap();
+    	
+		InputParameters param = FileHelper.getInputParameters();
+		noOfTimeslots = param.getNoOfTimeslots();
 		
-		// fill up matrix M[i][j] with each value representing students in common for exam i and exam j
-		// symmetrical matrix
-		for(int i=0; i < studentsExams.length; i++)
-	  	{
-        	String studentInCommon = studentIDMap.get(ReadData.getKeyByValue(indexStudentID, i));
-			
-		  	for(int j=0; j < studentsExams[i].length; j++)
-		  	{ 
-                for(int k=0; k < studentsExams[i].length; k++)
-                {	
-                    if(j != k)
-                    {
-                    	int exam1 = studentsExams[i][j];
-                    	int exam2 = studentsExams[i][k];
-                    	
-                    	ArrayList<String> studentIds = clashesMatrix.get(exam1, exam2);
-                    	
-                    	if (studentIds == null)
-                    	{
-                    		studentIds = new ArrayList<String>();
-	                    	studentIds.add(studentInCommon);
-	                    	clashesMatrix.put(exam1, exam2, studentIds);
-                    	}
-                    	else
-                    	{
-                    		clashesMatrix.get(exam1, exam2).add(studentInCommon);
-                    	}
-                    }
-                }
-		  	}
-	  	}
-		
-		saveClashesMatrix(clashesMatrix);
-		saveGAParameters(gaParameters);
-		
-		TreeMap<Integer, Timeslot> timeslotMap = getTimeslotMap();
-		noOfTimeslots = timeslotMap.size();
+		halfExamPeriod = formatter.parseDateTime(timeslotMap.get(noOfTimeslots / 2).getStartDate());
+		generateEvalMatrix(timeslotMap, true);
 	}
 	
-	public int[] runGA()
+	public void constructClashesMatrix(Connection conn, boolean init)
+	{
+		HashMap<String, ArrayList<Integer>> studentsExams = datafile.getStudentExamRel(conn);
+		
+		// Table clashesMatrix entry at i, j -> students in common for exam i and exam j	
+		clashesMatrix = new HashMap<IntTuple, ArrayList<String>>();
+			
+    	for (Entry<String, ArrayList<Integer>> entry : studentsExams.entrySet())
+		{
+			String studentId = entry.getKey();
+			ArrayList<Integer> studyUnits = entry.getValue();
+			
+			for (Integer firstExamID: studyUnits)
+			{	
+				if (clashesMatrix.get(IntTuple.of(firstExamID)) == null)
+				{
+					ArrayList<String> students = new ArrayList<String>();
+					students.add(studentId);
+					clashesMatrix.put(IntTuple.of(firstExamID), students);
+					
+					if (init)
+						noOfExams++;
+				}
+				else
+				{
+					clashesMatrix.get(IntTuple.of(firstExamID)).add(studentId);
+				}
+				
+				for (Integer secondExamID: studyUnits)
+				{
+					if (clashesMatrix.get(IntTuple.of(firstExamID, secondExamID)) == null)
+					{
+						ArrayList<String> students = new ArrayList<String>();
+						students.add(studentId);
+						clashesMatrix.put(IntTuple.of(firstExamID, secondExamID), students);
+					}
+					else
+					{
+						clashesMatrix.get(IntTuple.of(firstExamID, secondExamID)).add(studentId);
+					}
+					
+					for (Integer thirdExamID: studyUnits)
+					{						
+						if (clashesMatrix.get(IntTuple.of(firstExamID, secondExamID, thirdExamID)) == null)
+						{
+							ArrayList<String> students = new ArrayList<String>();
+							students.add(studentId);
+							clashesMatrix.put(IntTuple.of(firstExamID, secondExamID, thirdExamID), students);
+						}
+						else
+						{
+							clashesMatrix.get(IntTuple.of(firstExamID, secondExamID, thirdExamID)).add(studentId);
+						}
+					}
+				}
+			}
+		}
+    	
+    	if (init)
+    	{
+	    	eveningIndexExamID = FileHelper.getEveningIndexExamId();
+	    	noOfEveningExams = eveningIndexExamID.size();
+	    	noOfDayExams = noOfExams - noOfEveningExams;
+    	}
+    	
+    	FileHelper.saveClashesMatrix(clashesMatrix);
+	}
+	
+	public BestChromosome startGeneticAlgorithm()
 	{
 		long startTime;
 		long endTime;
@@ -162,19 +243,26 @@ public class GeneticAlgorithm
 		// generate first population with random chromosomes
 		for (int i = 0; i < noOfChromosomes; i++)
 		{
-			int[] chromosome = createChromosome();
+			Integer[] chromosome = createChromosome();
 			population[i] = chromosome;
 		}
 		
-		GAParameters gaParameters = getGAParameters();
+		BestChromosome bestGenerationChrom = new BestChromosome(new Integer[noOfExams]);
+		
 		// for the number of generations, calculate fitnesses and
 		// produce offspring for next generation
 		for (int i = 0; i < gaParameters.getNoOfGenerations(); i++)
 		{	
-			examineGenerationFitness(i);
+			BestChromosome bestChromosome = examineGenerationFitness(i);
+			
+			// if the best chromosome of this generation is better than any timetable generated before
+			if (bestChromosome.getFitness() > bestGenerationChrom.getFitness())
+			{
+				// replace best of generations with best chromosome now
+				bestGenerationChrom = bestChromosome;
+			}
 			
 			int interpolatingRates = gaParameters.getInterpolatingRates();
-			
 			if (interpolatingRates == GAParameters.InterpolatingRates.INTERPOLATING_RATES)
 			{
 				double minCrossoverRate = gaParameters.getMinCrossoverRate();
@@ -191,32 +279,55 @@ public class GeneticAlgorithm
 			selectionAndReproduction();
 		}
 		
+		BestChromosome finalSchedule = scheduleContemporaneousExams(bestGenerationChrom);
+		
 		endTime = System.currentTimeMillis();
 		System.out.println("\nRun time: "+ ((endTime - startTime) / 1000) + " seconds"); 
 		
-		int[] timetable = population[getFitTimetable()];
-		saveGeneratedTimetable(timetable);
-		
-		return timetable;
+		// save best timetable
+		FileHelper.saveBestChromosome(finalSchedule);
+		return finalSchedule;
 	}
 	
-	// get the maximum fitness among last generation to produce the timetable
-	// to show to the user on screen
-	public int getFitTimetable()
+	// after timetable is generated, schedule exams that have to be scheduled together
+	public BestChromosome scheduleContemporaneousExams(BestChromosome bestGenerationChrom)
 	{
-		double fit = 0;
-		int ind = 0;
+		Connection conn = SQLHelper.getConnection();
+		ArrayList<IntTuple> examsRel = ContemporaneousExams.getAllExamRelationships(conn);
 		
-		for (int i=0; i < noOfChromosomes; i++)
-		{
-			if (fitness[i] > fit)
+		BestChromosome bestSoFar = bestGenerationChrom;
+		
+		// for each exam relationship i.e. exams which have to be scheduled together
+		for (IntTuple examRel: examsRel) 
+		{	
+			int[] examsTogether = examRel.getData(); // get these exams
+			double maxFitness = 0.0;
+			
+			for (int i=0; i < noOfTimeslots; i++)
 			{
-				fit = fitness[i];
-				ind = i;
+				// get timetable of chromosome so far (create copy because of reference)
+				Integer[] timetable = bestSoFar.getChromosome();
+				Integer[] timetableCopy = Arrays.copyOf (timetable, timetable.length);
+				
+				// modify timetable positions at these exams from 0 to no of timeslot
+				// and always keep best timeslot to schedule them in
+				for (int j=0; j < examsTogether.length; j++)
+				{
+					timetableCopy[examsTogether[j]] = i;
+				}
+				
+				BestChromosome thisChromosome = evaluateChromosome(new BestChromosome(timetableCopy));
+				double thisFitness = thisChromosome.getFitness();
+				
+				if (thisFitness > maxFitness)
+				{
+					maxFitness = thisFitness;
+					bestSoFar = bestSoFar.copyChromosome(thisChromosome);
+				}
 			}
 		}
 		
-		return ind; // returns index of chromosome with max fitness
+		return bestSoFar;
 	}
 	
 	// Get random position for crossover [0, noOfExams - 1]
@@ -236,20 +347,20 @@ public class GeneticAlgorithm
 	// convert two ArrayLists of integers to a 2DArray where two_children[0] = first_child
 	// produced by genetic operator and two_children[1] = second_child produced by
 	// genetic operators (crossovers + mutation)
-	public int[][] convertTo2DArray(ArrayList<Integer> child1, ArrayList<Integer> child2)
+	public Integer[][] convertTo2DArray(ArrayList<Integer> child1, ArrayList<Integer> child2)
 	{
-		int[][] two_children = 
+		Integer[][] two_children = 
 		{
-			Ints.toArray(child1), Ints.toArray(child2)
+			child1.toArray(new Integer[child1.size()]), child2.toArray(new Integer[child2.size()])
 		};
 		
 		return two_children;
 	}
 	
 	// build up chromosome with random genes
-	public int[] createChromosome()
+	public Integer[] createChromosome()
 	{
-		int[] chromosome = new int[noOfExams];
+		Integer[] chromosome = new Integer[noOfExams];
 				
 		for (int i = 0; i < noOfExams; i++)
 		{
@@ -259,19 +370,14 @@ public class GeneticAlgorithm
 		
 		return chromosome;
 	}
-	
-	public Chromosome evaluateChromosome(int[] chrom, GAParameters gaParam, Table<Integer,Integer,ArrayList<String>> clashMatrix)
-	{
-		TreeMap<Integer, Timeslot> timeslotMap = getTimeslotMap();
-		DateTimeFormatter formatter = DateTimeFormat.forPattern("dd/MM/yyyy HH:mm");
 		
-		if (clashMatrix == null)
-			clashMatrix = clashesMatrix;
+	public BestChromosome evaluateChromosome(BestChromosome chromosome)
+	{			
+		Integer[] chrom = chromosome.getChromosome();
+		chromosome = new BestChromosome(chrom);
 		
-		if (gaParam == null)
-			gaParam = gaParameters;
-		
-		Chromosome chromosome = new Chromosome(chrom);
+		Multiset<Integer> occurenceSet = chromosome.getOccurenceSet();
+		Constraint constraints = chromosome.getConstraintViolations();
 		
 		// for all exams 
 		for (int j=0; j < chrom.length; j++)
@@ -279,233 +385,291 @@ public class GeneticAlgorithm
 			// get timeslot and find its date and time in timetable
 			int exam1_timeslot = chrom[j];
 			
-			Timeslot exam1Timeslot = timeslotMap.get(exam1_timeslot);  
-			String exam1StartStr = exam1Timeslot.getStartDate();
-			String exam1EndStr = exam1Timeslot.getEndDate();
-			
-			DateTime exam1Start = formatter.parseDateTime(exam1StartStr);
-			DateTime exam1End = formatter.parseDateTime(exam1EndStr);
-			
-			for (int k=0; k < chrom.length; k++)
+			// if exam still exists
+			if (exam1_timeslot != -1)
 			{
-				// if not the same exam
-				if (j != k)
-				{	
-					ArrayList<String> studentsInExam1And2 = clashMatrix.get(j, k);
+				// check occurences of this timeslot in the timetable i.e. how many exams scheduled in this timeslot
+				int occurences = occurenceSet.count(exam1_timeslot);
+				boolean isEvening = eveningIndexExamID.containsValue(j);
+				ArrayList<String> studentsInExam1 = clashesMatrix.get(IntTuple.of(j));
+				
+				if ((isEvening && (occurences > ((noOfEveningExams / noOfEveningTimeslots) * 2.5)))
+					|| (!isEvening && occurences > ((noOfDayExams / noOfDayTimeslots)) * 2))
+				{
+					chromosome.setTotalPunishment(chromosome.getTotalPunishment() + gaParameters.getSpreadOutPunishment());
+					constraints.setSpreadOutPunish(constraints.getSpreadOutPunish() + 1);
+				}
+				
+				int numberOfStudents;
+				if (studentsInExam1 == null)
+					numberOfStudents = 0;
+				else
+					numberOfStudents = studentsInExam1.size();
+				
+				DateTime startTime = formatter.parseDateTime(timeslotMap.get(exam1_timeslot).getStartDate());
+				
+				// if this exam has a large number of students and it is scheduled 
+				// in the second half of the exam period
+				if (numberOfStudents >= 30 && startTime.isAfter(halfExamPeriod))
+				{
+					int noOfStudentsPunish = gaParameters.getNoOfStudentsPunishment();
 					
-					// if there are students in common for both exams i and j 
-					if (studentsInExam1And2 != null)
+					// double the penalty if number of students > 60
+					if (numberOfStudents >= 60)
+						noOfStudentsPunish += gaParameters.getNoOfStudentsPunishment();
+					
+					chromosome.setTotalPunishment(chromosome.getTotalPunishment() + noOfStudentsPunish);
+					constraints.setNoOfStudentsPunish(constraints.getNoOfStudentsPunish() + 1);								
+					chromosome.saveViolationInfo(Constraint.NO_OF_STUDENTS_PUNISH, IntTuple.of(j), studentsInExam1);
+				}
+				
+				// if it is an evening exam
+				if (isEvening)
+				{
+					boolean saturday = (startTime.getDayOfWeek() == DateTimeConstants.SATURDAY);
+					int hours = startTime.getHourOfDay();
+					
+					// if scheduled before 17:00 on a weekday
+					if (!saturday && hours < 17)
 					{
-						// comparing exam j in chromosome with exam k and checking if they
-						// are scheduled in the same timeslot
-						int exam2_timeslot = chrom[k];
+						chromosome.setTotalPunishment(chromosome.getTotalPunishment() + gaParameters.getEveningPunishment());
+						constraints.setEveningPunish(constraints.getEveningPunish() + 1);
+						chromosome.saveViolationInfo(Constraint.EVENING_PUNISH, IntTuple.of(j), studentsInExam1);
+					}
+				}
+				
+				for (int k=0; k < chrom.length; k++)
+				{
+					// if not the same exam
+					if (j != k)
+					{					
+						ArrayList<String> studentsInExam1And2 = clashesMatrix.get(IntTuple.of(j, k));
 						
-						// get timeslot 2 date and time
-						Timeslot exam2Timeslot = timeslotMap.get(exam2_timeslot);  
-						String exam2StartStr = exam2Timeslot.getStartDate();
-						String exam2EndStr = exam2Timeslot.getEndDate();
-						
-						DateTime exam2Start = formatter.parseDateTime(exam2StartStr);
-						DateTime exam2End = formatter.parseDateTime(exam2EndStr);
-						
-						Interval interval = new Interval(exam1Start, exam1End);
-						Interval interval2 = new Interval(exam2Start, exam2End);
-
-						boolean overlaps = interval.overlaps(interval2);
-
-						// if scheduled in the same timeslot or overlapping times
-						// and clash not already noted for, increase clash punishment
-
-						Table<Integer, Integer, Boolean> clashes = chromosome.getClashesPunished();
-						
-						if ((exam1_timeslot == exam2_timeslot || overlaps)  && clashes.get(j, k) == null)
-						{	
-							clashes.put(j, k, true); // set exam j & k to true - i.e. already checked clash
-							chromosome.setClashesPunished(clashes);
-							chromosome.setTotalPunishment(chromosome.getTotalPunishment() + clashPunishment);
-							chromosome.setClashPunish(chromosome.getClashPunish() + 1);
-						}
-						
-						// if not in same timeslot, check for soft constraints
-						else
+						// if there are students in common for both exams i and j 
+						if (studentsInExam1And2 != null)
 						{
-							boolean before = exam1Start.isBefore(exam2Start);
-							Days days = null;
+							int exam2_timeslot = chrom[k];
 							
-							if (before) days = Days.daysBetween(exam1Start, exam2Start);
-							else days = Days.daysBetween(exam2Start, exam1Start);
-												
-							// calculate days between exam 1 and exam 2
-							int daysInBetween = days.getDays();
-							
-							// if those exams are scheduled on the same day, increase punishment
-							Table<Integer, Integer, Boolean> sameday = chromosome.getSamedayPunished();
-							Table<Integer, Integer, Boolean> twodays = chromosome.getTwodaysPunished();
-							
-							if (daysInBetween == 0 && sameday.get(j, k) == null)
+							if (exam2_timeslot != -1)
 							{
-								sameday.put(j, k, true); // set exam j & k to true - i.e. already checked same day constraint
-								chromosome.setSamedayPunished(sameday);
-								chromosome.setTotalPunishment(chromosome.getTotalPunishment() + sameDayPunishment);
-								chromosome.setSameDayPunish(chromosome.getSameDayPunish() + 1);
-							}
-							
-							// if those exams are scheduled on two consecutive days
-							else if (daysInBetween == 1 && twodays.get(j, k) == null)
-							{
-								twodays.put(j, k, true); // set exam j & k to true - i.e. already checked two consecutive day constraint
-								chromosome.setTwodaysPunished(twodays);
-								chromosome.setTotalPunishment(chromosome.getTotalPunishment() + twoDaysPunishment);
-								chromosome.setTwoDayPunish(chromosome.getTwoDayPunish() + 1);
+								TemporalDifference tempDiff = evalMatrix.get(exam1_timeslot, exam2_timeslot);
+								boolean overlaps = tempDiff.isOverlaps();
 								
-								// get time between exam 1 and 2
-								Hours timeBetweenExam1And2 = Hours.hoursBetween(exam1End, exam2Start);
-								Hours twentyHrs = Hours.EIGHT.multipliedBy(2).plus(4);
+								Table<Integer, Integer, Boolean> clashes = chromosome.getClashesPunished();
 								
-								// on two consecutive days - one in the evening, one in the next morning
-								// more serious therefore punish more
-								if (timeBetweenExam1And2.isLessThan(twentyHrs))
-								{
-									chromosome.setTotalPunishment(chromosome.getTotalPunishment() + 2);
+								// if scheduled in the same timeslot or overlapping times
+								// and clash not already noted for, increase clash punishment
+								if ((exam1_timeslot == exam2_timeslot || overlaps)  && clashes.get(k, j) == null)
+								{	
+									clashes.put(j, k, true); // set exam j & k to true - i.e. already checked clash
+									chromosome.setClashesPunished(clashes);
+									chromosome.setTotalPunishment(chromosome.getTotalPunishment() + gaParameters.getClashPunishment());
+									constraints.setClashPunish(constraints.getClashPunish() + studentsInExam1And2.size());
+									chromosome.saveViolationInfo(Constraint.CLASH_PUNISH, IntTuple.of(j, k), studentsInExam1And2);
 								}
-								
-								// check for a third exam scheduled after these two
-								for (int l = 0; l < chrom.length; l++)
+								// if not in same timeslot, check for soft constraints
+								else
 								{
-									// if k and l are not the same exam
-									if (k != l)
+									// if those exams are scheduled on the same day, increase punishment
+									Table<Integer, Integer, Boolean> sameday = chromosome.getSamedayPunished();
+									Table<Integer, Integer, Boolean> twodays = chromosome.getTwodaysPunished();
+									int daysBetween = tempDiff.getDaysBetween();
+									
+									if (daysBetween == 0 && sameday.get(k, j) == null)
 									{
-										// if there are students in common for both exams j and k 
-										ArrayList<String> studentsInExam2And3 = clashMatrix.get(k, l);
+										sameday.put(j, k, true); // set exam j & k to true - i.e. already checked clash
+										chromosome.setSamedayPunished(sameday);
+										int punishment = gaParameters.getSameDayPunishment() + studentsInExam1And2.size();
 										
-										if (studentsInExam2And3 != null)
+										chromosome.setTotalPunishment(chromosome.getTotalPunishment() + punishment);
+										constraints.setSameDayPunish(constraints.getSameDayPunish() + studentsInExam1And2.size());
+										chromosome.saveViolationInfo(Constraint.SAME_DAY_PUNISH, IntTuple.of(j, k), studentsInExam1And2);
+									}
+									// if those exams are scheduled on two consecutive days
+									else if (daysBetween == 1 && twodays.get(k, j) == null)
+									{
+										twodays.put(j, k, true); // set exam j & k to true - i.e. already checked clash
+										chromosome.setTwodaysPunished(twodays);
+										int punishment = gaParameters.getTwoDaysPunishment() + studentsInExam1And2.size();
+		
+										chromosome.setTotalPunishment(chromosome.getTotalPunishment() + punishment);
+										constraints.setTwoDayPunish(constraints.getTwoDayPunish() + studentsInExam1And2.size());								
+										chromosome.saveViolationInfo(Constraint.TWO_DAYS_PUNISH, IntTuple.of(j, k), studentsInExam1And2);
+										
+										// get time between exam 1 and 2
+										Hours hoursBetween = tempDiff.getHoursBetween();
+										
+										// on two consecutive days - one in the evening, one in the next morning
+										// more serious therefore punish more
+										if (hoursBetween.isLessThan(twentyHrs))
 										{
-											// check if students in exam 2 and 3 are also the same students in exam 1 and 2
-											ArrayList<String> studentsInExam1And2And3 = new ArrayList<String>(studentsInExam2And3);
-											studentsInExam1And2And3.retainAll(studentsInExam1And2);
-											
-											// if there are students who have exam 1 and 2 which are
-											// already consecutive and exam 3 as well
-											if (studentsInExam1And2And3.size() > 0)
+											int punishmenttwenty = gaParameters.getTwentyHourPunishment() + studentsInExam1And2.size();
+											chromosome.setTotalPunishment(chromosome.getTotalPunishment() + punishmenttwenty);
+											constraints.setTwentyHourPunish(constraints.getTwentyHourPunish() + studentsInExam1And2.size());
+											chromosome.saveViolationInfo(Constraint.DAY_EVENING_PUNISH, IntTuple.of(j, k), studentsInExam1And2);	
+										}
+										
+										// check for a third exam scheduled after these two
+										for (int l = 0; l < chrom.length; l++)
+										{
+											// if j, k and l are three different exams
+											if (j != l && k != l)
 											{
-												// get 3rd timeslot date time
-												int exam3_timeslot = chrom[l];
-												String exam3StartStr = timeslotMap.get(exam3_timeslot).getStartDate();
-												DateTime exam3Start = formatter.parseDateTime(exam3StartStr);
+												// if there are students in common for both exams j and k 
+												ArrayList<String> studentsInExams1_2_3 = clashesMatrix.get(IntTuple.of(j, k, l));
 												
-												boolean beforeThird = exam2Start.isBefore(exam3Start);
-												Days days2 = null;
-												
-												if (beforeThird) days2 = Days.daysBetween(exam2Start, exam3Start);
-												else days2 = Days.daysBetween(exam3Start, exam2Start);
-		
-												// get days between 2nd and 3rd exam
-												daysInBetween = days2.getDays();
-												
-												// if days between third and second exam is 1 .. you have 3 consecutive exams
-												// for the same student, therefore increase three day punish
-												if (daysInBetween == 1)
+												if (studentsInExams1_2_3 != null)
 												{
-													chromosome.setTotalPunishment(chromosome.getTotalPunishment() + threeDaysPunishment);
-													chromosome.setThreeDayPunish(chromosome.getThreeDayPunish() + 1);
-												}			
-											}
-										} // end if students in exam 2 and 3
-									} // end for loop l
-								} // end if k != l
-							} // end if two consecutive exams
-						} // end if overlaps or finished checking soft constraints
-					} // end if students in exams 1 and 2
-				} // end if j != k
-			} // end of for loop k 
-		} // end of for loop j
+													// get 3rd timeslot date time
+													int exam3_timeslot = chrom[l];
+													
+													// if exam l still exists 
+													if (exam3_timeslot != -1)
+													{
+														TemporalDifference tempDiff2 = evalMatrix.get(exam1_timeslot, exam3_timeslot);
+														TemporalDifference tempDiff3 = evalMatrix.get(exam2_timeslot, exam3_timeslot);
+														
+														int daysInBetween1And3 = tempDiff2.getDaysBetween();
+														int daysInBetween2And3 = tempDiff3.getDaysBetween();
+														
+														HashMap<IntTuple, Boolean> threedays = chromosome.getThreedaysPunished();
+														
+														// if either days between first and third exam is 1 or days between second and third exam 
+														// is 1, you have 3 consecutive exams for the same student, therefore increase three day punish
+														if ((daysInBetween1And3 == 1 || daysInBetween2And3 == 1) && !new IntTuple(j,k,l).isChecked(threedays))
+														{
+															threedays.put(IntTuple.of(j, k, l), true);
+															chromosome.setThreedaysPunished(threedays);
+															int punishmentthree = gaParameters.getThreeDaysPunishment() + studentsInExams1_2_3.size();
+															chromosome.setTotalPunishment(chromosome.getTotalPunishment() + punishmentthree);
+															constraints.setThreeDayPunish(constraints.getThreeDayPunish() + studentsInExams1_2_3.size());
+															chromosome.saveViolationInfo(Constraint.THREE_DAYS_PUNISH, IntTuple.of(j, k, l), studentsInExams1_2_3);
+			
+														}
+													}
+												}
+											} 
+										}
+									} // exam j and k scheduled on two consecutive days 
+								} // check soft constraints between j and k
+							} // if students between exam j and k & clashes
+						} // if exam k exists
+					} // if j != k
+				}  // end for k
+			} // if exam j exists
+		} // end for j
+				
+		chromosome.setConstraintViolations(constraints);
 		
-		BigDecimal fitnessValue = null;
+		double fitnessValue = 0.0;
 		int punishment = chromosome.getTotalPunishment();		
-		
-		int fitnessFunction = gaParam.getInverseSquarePressure();
+		int fitnessFunction = gaParameters.getInverseSquarePressure();
 			
 		switch (fitnessFunction)
 		{
 			// inverse square pressure: 1.0 / 1.0 + (punishment * punishment)
 			case GAParameters.FitnessFunction.INVERSE_SQUARE_PRESSURE: 
-				 fitnessValue = new BigDecimal(1.0 / (double) (1.0 + Math.pow(punishment, 2)));
+				 fitnessValue = 1.0 / (double) (1.0 + Math.pow(punishment, 2));
 				 break;
 				 
 			// fitness function: 1.0 / (1.0 + punishment) because of division by 0.
 			case GAParameters.FitnessFunction.INVERSE_FUNCTION:
-				 fitnessValue = new BigDecimal(1.0 / (double) (1.0 + punishment));
+				 fitnessValue = 1.0 / (double) (1.0 + punishment);
 			
 			default: break;
 		}
 		
-		fitnessValue.setScale(6, BigDecimal.ROUND_HALF_UP);
-		chromosome.setFitness(fitnessValue.doubleValue());
+		chromosome.setFitness(fitnessValue);
 		
 		return chromosome;
 	}
-	
+		
 	// give punishments for each broken constraint for each chromosome
 	// and finally fill up fitness array with fitness function objective
 	// value for each chromosome
 	
 	// fitness function: 1 / (1 + punishment) therefore, fitness = 1, no broken constraints
-	public void examineGenerationFitness(int generationNo)
+	public BestChromosome examineGenerationFitness(int generationNo)
 	{
-		int minConflicts = 0, minClashes = -1, minSameDay = -1, minTwoDays = -1, minThreeDays = -1;
+		BestChromosome bestChromosome = null;
+		
+		int minConflicts = 0, minClashes = -1, minSameDay = -1, minTwoDays = -1, minThreeDays = -1, 
+			minEvening = -1, minSpreadOut = -1, minNoOfStudents = -1, minTwentyHours = -1;
 		double maxFitness = 0, totalFitness = 0;
 		
-		/*System.out.print("\nGENERATION " + (generationNo + 1) + ":\n ");
+		System.out.print("\nGENERATION " + (generationNo + 1) + ":\n ");
 		
-		System.out.printf("%n %5s | %25s | %8s | %-310s | %8s %n", "Index", "Errors[HC][SC1][SC2][SC3]", "Fitness", "Chromosomes", "Acc. Fitness");
+		System.out.printf("%n %5s | %45s | %22s | %-320s | %8s %n", "Index", "Errors[HC][HC2][SC1][SC2][SC3][S4]", "Fitness", "Chromosomes", "Acc. Fitness");
 		
-		for (int i=0; i < 380; i++){
+		for (int i=0; i < 410; i++){
 			System.out.print("-");
 		}
 		
-		System.out.print("\n"); */
+		System.out.print("\n");
 		
 		// for each chromosome / solution
 		for (int i=0; i < population.length; i++)
 		{ 
 			// examine chromosome and return punishment + fitness information
-			Chromosome chromosome = evaluateChromosome(population[i], null, null);	
-			fitness[i] = chromosome.getFitness();
-			totalFitness += fitness[i];
+			BestChromosome chromosome = evaluateChromosome(new BestChromosome(population[i]));	
 			
 			int punishment = chromosome.getTotalPunishment();
 			if (minConflicts == 0 || punishment < minConflicts) minConflicts = punishment;
 			
+			Constraint constraintViolations = chromosome.getConstraintViolations();
 			// minimum punishments for each constraint
-			int clashPunish = chromosome.getClashPunish();
+			int clashPunish = constraintViolations.getClashPunish();
 			if (minClashes == -1 || clashPunish < minClashes) minClashes = clashPunish;
 			
-			int samedayPunish = chromosome.getSameDayPunish();
+			int samedayPunish = constraintViolations.getSameDayPunish();
 			if (minSameDay == -1 || samedayPunish < minSameDay) minSameDay = samedayPunish;
 			
-			int twodayPunish = chromosome.getTwoDayPunish();
+			int twentyHourPunish = constraintViolations.getTwentyHourPunish();
+			if (minTwentyHours == -1 || twentyHourPunish < minTwentyHours) minTwentyHours = twentyHourPunish;
+			
+			int twodayPunish = constraintViolations.getTwoDayPunish();
 			if (minTwoDays == -1 || twodayPunish < minTwoDays) minTwoDays = twodayPunish;
 			
-			int threedayPunish = chromosome.getThreeDayPunish();
+			int threedayPunish = constraintViolations.getThreeDayPunish();
 			if (minThreeDays == -1 || threedayPunish < minThreeDays) minThreeDays = threedayPunish;
 			
-			if (fitness[i] > maxFitness) maxFitness = fitness[i];
+			int eveningPunish = constraintViolations.getEveningPunish();
+			if (minEvening == -1 || eveningPunish < minEvening) minEvening = eveningPunish;
 			
-			if (i == 0) accumulatedFitness[i] = fitness[i];
-			else accumulatedFitness[i] = new BigDecimal(fitness[i] + accumulatedFitness[i - 1]).setScale(6, BigDecimal.ROUND_HALF_UP).doubleValue();
+			int spreadOutPunish = constraintViolations.getSpreadOutPunish();
+			if (minSpreadOut == -1 || spreadOutPunish < minSpreadOut) minSpreadOut = spreadOutPunish;
 			
-			/*System.out.printf("%6s | %25s | %.6f | %-310s | %.6f %n", 
+			int noOfStudentsPunish = constraintViolations.getNoOfStudentsPunish();
+			if (minNoOfStudents == -1 || noOfStudentsPunish < minNoOfStudents) minNoOfStudents = noOfStudentsPunish;
+			
+			fitness[i] = chromosome.getFitness();
+			totalFitness += fitness[i];
+			
+			if (fitness[i] > maxFitness) 
+			{
+				maxFitness = fitness[i];
+				bestChromosome = chromosome;
+			}
+			
+			if (i == 0) 
+				accumulatedFitness[i] = fitness[i];
+			else
+				accumulatedFitness[i] = fitness[i] + accumulatedFitness[i - 1];
+			
+			System.out.printf("%6s | %45s | %.20f | %-320s | %.6f %n", 
 							(i+1) + ".",  
-							punishment + " [" + clashPunish + "][" + samedayPunish + "][" + twodayPunish + "][" + threedayPunish + "]" ,
+							punishment + " [" + clashPunish + "][" + eveningPunish + "][" + samedayPunish + "][" + twodayPunish + "][" + twentyHourPunish + "][" + threedayPunish + "][" + spreadOutPunish + "][" + noOfStudentsPunish + "]",
 							fitness[i],
 							Arrays.toString(population[i]).replace("[", "").replace("]", "") + "",
 							accumulatedFitness[i]
-			);*/
+			);
 		
 		} // end for - i
 		
 		System.out.println("\nSummary of Generation " + (generationNo + 1) + ":");
 		System.out.println("Average Fitness = " + totalFitness / noOfChromosomes + "\t\tMin Conficts = " + minConflicts+ "\t\tMax Fitness = " + maxFitness + "\n");
+	
+		return bestChromosome;
 	}
 	
 	// select a parent by roulette wheel selection
@@ -553,7 +717,7 @@ public class GeneticAlgorithm
 	// If within mutation rate, mutate bit with a random gene [1, noOfTimeSlots]
 	public void selectionAndReproduction()
 	{
-		int[][] nextPopulation = new int[noOfChromosomes][noOfExams];
+		Integer[][] nextPopulation = new Integer[noOfChromosomes][noOfExams];
 		int chromosomeNo = 0;
 		
 		// Elitist Selection - survive best parent from current generation
@@ -576,7 +740,7 @@ public class GeneticAlgorithm
 			
 			while (count != Math.floor(noOfChromosomes / 4))
 			{
-				int[] chromosome = createChromosome();
+				Integer[] chromosome = createChromosome();
 				population[count] = chromosome;
 				count++;
 			}
@@ -594,7 +758,7 @@ public class GeneticAlgorithm
 			}
 			
 			double random_crossover = Math.random(); // [0, 1]
-			int[][] children = new int[2][noOfExams];
+			Integer[][] children = new Integer[2][noOfExams];
 			
 			// if within crossover rate, apply one point crossover
 			// else leave parents as they are
@@ -654,7 +818,7 @@ public class GeneticAlgorithm
 	}
 	
 	// one point crossover method
-	public int[][] onePointCrossover(int chromosome1, int chromosome2)
+	public Integer[][] onePointCrossover(Integer chromosome1, Integer chromosome2)
 	{
 		// random number for position 1-9
 		int position = getRandomPosition();
@@ -681,7 +845,7 @@ public class GeneticAlgorithm
 	}
 
 	// two point crossover method
-	public int[][] twoPointCrossover(int chromosome1, int chromosome2)
+	public Integer[][] twoPointCrossover(Integer chromosome1, Integer chromosome2)
 	{
 		int position1 = getRandomPosition();
 		int position2 = getRandomPosition();
@@ -709,7 +873,7 @@ public class GeneticAlgorithm
 		}
 		else
 		{
-			int[][] two_children = 
+			Integer[][] two_children = 
 			{
 				population[chromosome1], population[chromosome2]
 			};
@@ -719,7 +883,7 @@ public class GeneticAlgorithm
 	}
 	
 	// two point crossover method
-	public int[][] uniformCrossover(int chromosome1, int chromosome2)
+	public Integer[][] uniformCrossover(int chromosome1, int chromosome2)
 	{
 		int[] template = new int[noOfExams];
 		
@@ -750,17 +914,13 @@ public class GeneticAlgorithm
 			}
 		}
 				
-		int[][] two_children = 
-		{
-			Ints.toArray(child1), Ints.toArray(child2)
-		};
-		
+		Integer[][] two_children = convertTo2DArray(child1, child2);
 		return two_children;
 	}
 	
 	// Inversion is a genetic operator where a subset of one chromosome
 	// has its order reversed
-	public int[] inversion(int chromosome)
+	public Integer[] inversion(int chromosome)
 	{
 		int position1 = getRandomPosition();
 		int position2 = getRandomPosition();
@@ -796,172 +956,11 @@ public class GeneticAlgorithm
 					child.add(population[chromosome][i]);
 				}
 			}
-			return Ints.toArray(child); // return chromosome with reversed subset
+			return child.toArray(new Integer[child.size()]); // return chromosome with reversed subset
 		}
 		else return population[chromosome]; // else return chromosome as is
 	}
 	
-	public void saveGAParameters(GAParameters gaParameters)
-	{
-		ObjectOutputStream outputStream = null;
-		
-		try
-		{
-			outputStream = FileHelper.getObjectWriter("GAParameters.data");
-			outputStream.writeObject(gaParameters);
-		}
-		catch (IOException e)
-		{
-			System.out.println("[GeneticAlgorithm.saveGAParameters()]: " + e.getMessage());
-		}
-		finally
-		{
-			FileHelper.closeOutputStream(outputStream);
-		}
-	}
-	
-	public static GAParameters getGAParameters()
-	{
-		ObjectInputStream inputStream = null;
-		GAParameters gaParameters = null;
-		
-		try
-		{
-			inputStream = FileHelper.getObjectReader("GAParameters.data");
-			gaParameters = (GAParameters) inputStream.readObject();
-		}
-		catch (Exception e)
-		{
-			System.out.println("[GeneticAlgorithm.getGAParameters()]: " + e.getMessage());
-		}
-		finally
-		{
-			FileHelper.closeInputStream(inputStream);
-		}
-		return gaParameters;
-	}
-	
-	public void saveGeneratedTimetable(int[] timetable)
-	{
-		ObjectOutputStream outputStream = null;
-		
-		try
-		{
-			outputStream = FileHelper.getObjectWriter("timetable.data");
-			outputStream.writeObject(timetable);
-		}
-		catch (IOException e)
-		{
-			System.out.println("[GeneticAlgorithm.saveGeneratedTimetable()]: " + e.getMessage());
-		}
-		finally
-		{
-			FileHelper.closeOutputStream(outputStream);
-		}
-	}
-	
-	public static int[] getTimetable()
-	{
-		ObjectInputStream inputStream = null;
-		int[] timetable = null;
-		
-		try
-		{
-			inputStream = FileHelper.getObjectReader("timetable.data");
-			timetable = (int[]) inputStream.readObject();
-		}
-		catch (Exception e)
-		{
-			System.out.println("[GeneticAlgorithm.getTimetable()]: " + e.getMessage());
-		}
-		finally
-		{
-			FileHelper.closeInputStream(inputStream);
-		}
-		return timetable;
-	}
-	
-	public void saveTimeslotMap(TreeMap<Integer, Timeslot> timeslotMap)
-	{
-		ObjectOutputStream outputStream = null;
-		
-		try
-		{
-			outputStream = FileHelper.getObjectWriter("timeslotMap.data");
-			outputStream.writeObject(timeslotMap);
-		}
-		catch (IOException e)
-		{
-			System.out.println("[GeneticAlgorithm.saveTimeslotMap()]: " + e.getMessage());
-		}
-		finally
-		{
-			FileHelper.closeOutputStream(outputStream);
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static Table<Integer, Integer, ArrayList<String>> getClashesMatrix()
-	{
-		ObjectInputStream inputStream = null;
-		Table<Integer, Integer, ArrayList<String>> clashesMatrix = null;
-		
-		try
-		{
-			inputStream = FileHelper.getObjectReader("clashesMatrix.data");
-			clashesMatrix = (Table<Integer, Integer, ArrayList<String>>) inputStream.readObject();
-		}
-		catch (Exception e)
-		{
-			System.out.println("[GeneticAlgorithm.getClashesMatrix()]: " + e.getMessage());
-		}
-		finally
-		{
-			FileHelper.closeInputStream(inputStream);
-		}
-		return clashesMatrix;
-	}
-	
-	public void saveClashesMatrix(Table<Integer, Integer, ArrayList<String>> clashesMatrix)
-	{
-		ObjectOutputStream outputStream = null;
-		
-		try
-		{
-			outputStream = FileHelper.getObjectWriter("clashesMatrix.data");
-			outputStream.writeObject(clashesMatrix);
-		}
-		catch (IOException e)
-		{
-			System.out.println("[GeneticAlgorithm.saveClashesMatrix()]: " + e.getMessage());
-		}
-		finally
-		{
-			FileHelper.closeOutputStream(outputStream);
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static TreeMap<Integer, Timeslot> getTimeslotMap()
-	{
-		ObjectInputStream inputStream = null;
-		TreeMap<Integer, Timeslot> timeslotMap = null;
-		
-		try
-		{
-			inputStream = FileHelper.getObjectReader("timeslotMap.data");
-			timeslotMap = (TreeMap<Integer, Timeslot>) inputStream.readObject();
-		}
-		catch (Exception e)
-		{
-			System.out.println("[GeneticAlgorithm.getTimetable()]: " + e.getMessage());
-		}
-		finally
-		{
-			FileHelper.closeInputStream(inputStream);
-		}
-		return timeslotMap;
-	}
 
 	public Timeslot buildTimeslot(HttpServletRequest request, String thisDay, int timeslotNo, int dayOfWeek)
 	{
@@ -981,10 +980,68 @@ public class GeneticAlgorithm
 		Timeslot timeslot = new Timeslot(startTimeslotStr, endTimeslotStr);
 		return timeslot;
 	}
-
-	public TreeMap<Integer, Timeslot> setTimeslotMap(HttpServletRequest request, Calendar c, InputParameters param)
+	
+	// this matrix contains temporal difference between one exam and another in a scheduled
+	// timetable
+	public Table<Integer, Integer, TemporalDifference> generateEvalMatrix(HashMap<Integer, Timeslot> timeslotMap, boolean init)
 	{
-		TreeMap<Integer, Timeslot> timeslotMap = new TreeMap<Integer, Timeslot>();
+		evalMatrix = HashBasedTable.create();
+		int noOfTimeslots = timeslotMap.size();
+		int noOfEveningTimeslots = 0;
+		int noOfDayTimeslots = 0;
+		
+		for (int i=0; i < noOfTimeslots; i++)
+		{
+			Timeslot exam1Timeslot = timeslotMap.get(i);			
+			Interval interval = DateHelper.getInterval(exam1Timeslot);
+			
+			if (interval.getStart().getHourOfDay() >= 17)
+				noOfEveningTimeslots++;
+			
+			for (int j=0; j < noOfTimeslots; j++)
+			{
+				Timeslot exam2Timeslot = timeslotMap.get(j);
+				
+				Interval interval2 = DateHelper.getInterval(exam2Timeslot);
+				boolean overlaps = interval.overlaps(interval2);
+				int daysInBetween = DateHelper.getDaysBetween(interval, interval2);
+				Hours hours = Hours.hoursBetween(interval.getEnd(), interval2.getStart());
+				
+				TemporalDifference tempDiff = new TemporalDifference(overlaps, daysInBetween, hours);
+				evalMatrix.put(i, j, tempDiff);	
+			}
+		}
+		noOfDayTimeslots = noOfTimeslots - noOfEveningTimeslots;
+		
+		InputParameters param = FileHelper.getInputParameters();
+		if (init)
+		{
+			this.noOfTimeslots = noOfTimeslots;
+			this.noOfEveningTimeslots = noOfEveningTimeslots;
+			this.noOfDayTimeslots = noOfTimeslots;
+			
+			param.setNoOfEveningTimeslots(noOfEveningTimeslots);
+			param.setNoOfDayExams(noOfDayExams);
+			param.setNoOfEveningExams(noOfEveningExams);
+			param.setNoOfDayTimeslots(noOfDayTimeslots);
+			param.setNoOfTimeslots(noOfTimeslots);
+			
+			FileHelper.saveInputParameters(param);
+		}
+		else
+		{
+			this.noOfTimeslots = param.getNoOfTimeslots();
+			this.noOfEveningTimeslots = param.getNoOfEveningTimeslots();
+			this.noOfDayTimeslots = param.getNoOfDayTimeslots();
+		}
+		
+		FileHelper.saveEvalMatrix(evalMatrix);
+		return evalMatrix;
+	}
+
+	public HashMap<Integer, Timeslot> setTimeslotMap(HttpServletRequest request, Calendar c, InputParameters param)
+	{
+		HashMap<Integer, Timeslot> timeslotMap = new HashMap<Integer, Timeslot>();
 		
 		Days days = Days.daysBetween(new DateTime(startDate), new DateTime(endDate));
 		int daysInBetween = days.getDays();
@@ -1039,38 +1096,20 @@ public class GeneticAlgorithm
 			c.setTime(startDate);
 		}
 		
+		FileHelper.saveTimeslotMap(timeslotMap);
 		return timeslotMap;
 	}
 	
-	public void moveEvent()
-	{
-		// timeslotMap ha jkun mapped bit timeslot li eda fih mad data fit timetable
-		// 30 -- 26/01/2013 09:00 - 26/01/2013 12:00
-		
-		// issa dan jista jcaqlaqli ezami fejn irid.. jista jkun li lanqas biss eda fil
-		// hinijiet imnizzlin
-		
-		// trid ticcekja li l post fejn caqlaqta ma hemmx dati mit timeslot map joverlappjawa
-		// jekk emm: iccekja li l ezamijiet li ghandek f dik it timeslot ma jicclashjawx ma
-		// l ezami li caqlaqt
-		
-		
-		
-	}
-	
-	public void insertTimetableEvents(int[] bestTimetable)
+	public void insertTimetableEvents(Integer[] bestTimetable)
 	{	
-		// exams - positions, timeslots - values
-		ArrayList<StudyUnit> exams = datafile.getStudyUnits();
 		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-		TreeMap<Integer, Timeslot> timeslotMap = getTimeslotMap();
+		ArrayList<StudyUnit> studyUnits = datafile.getStudyUnits();
 		
 		// loop the timetable chosen by GA
 		for (int i=0; i < bestTimetable.length; i++)
 		{
 			int timeslotNo = bestTimetable[i];
-			int examNo = i;
-			StudyUnit studyUnit = exams.get(examNo);
+			StudyUnit studyUnit = studyUnits.get(i);
 			
 			Date start_date = null;
 			Date end_date = null;
@@ -1112,11 +1151,8 @@ public class GeneticAlgorithm
 		    Connection conn = SQLHelper.getConnection();
 		    
 		    try
-		    {
-		    	TreeMap<Integer, Integer> indexExamID = ReadData.getIndexExamId();
-		    	
-		    	int studyUnitID = ReadData.getKeyByValue(indexExamID, examNo);
-		    	pstmt = TimetableEvent.insertEvent(conn, event, studyUnitID);
+		    {		    	
+		    	pstmt = TimetableEvent.insertEvent(conn, event, studyUnit.getExamID());
 		    	
 		    	if (pstmt != null) {
 	            	pstmt.executeUpdate();

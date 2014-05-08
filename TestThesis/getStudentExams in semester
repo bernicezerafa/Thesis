@@ -1,0 +1,6 @@
+SELECT st.*, s.StudentID
+FROM dbo.Student_Exams se 
+JOIN dbo.StudyUnits st ON se.ExamID = st.ID
+JOIN dbo.Students s ON se.StudentID = s.StudentID
+WHERE st.Semester = '1' AND st.NoOfStudents > 0 
+ORDER BY se.StudentID ASC

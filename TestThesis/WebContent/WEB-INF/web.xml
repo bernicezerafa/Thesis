@@ -44,4 +44,20 @@
     <servlet-name>GetEvents</servlet-name>
     <url-pattern>/getEvents</url-pattern>
   </servlet-mapping>
+  <servlet>
+    <servlet-name>AddDropStudent</servlet-name>
+    <servlet-class>servlets.AddDropStudent</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>AddDropStudent</servlet-name>
+    <url-pattern>/addDropStudent</url-pattern>
+  </servlet-mapping>
+   <servlet>
+    <servlet-name>GetTimetableState</servlet-name>
+    <servlet-class>servlets.GetTimetableState</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>GetTimetableState</servlet-name>
+    <url-pattern>/getDetails</url-pattern>
+  </servlet-mapping>
 </web-app>

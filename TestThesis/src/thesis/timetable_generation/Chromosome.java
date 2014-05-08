@@ -1,77 +1,60 @@
 package thesis.timetable_generation;
 
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.List;
+
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multiset;
 import com.google.common.collect.Table;
 
-public class Chromosome {
+public class Chromosome implements Serializable {
 	
-	private int[] chromosome;
-	private int clashPunish;
-	private int sameDayPunish;
-	private int twoDayPunish;
-	private int threeDayPunish;
+	private static final long serialVersionUID = 1L;
+	
+	private Integer[] chromosome;
+	private Constraint constraintViolations;
 	private int totalPunishment;
 	private double fitness;
 	private Table<Integer, Integer, Boolean> clashesPunished;
 	private Table<Integer, Integer, Boolean> samedayPunished;
 	private Table<Integer, Integer, Boolean> twodaysPunished;
+	private HashMap<IntTuple, Boolean> threedaysPunished;
 	
-	public Chromosome(int[] chromosome) {
+	// how much times does a particular timeslot no. occur in the chromosome
+	private Multiset<Integer> occurenceSet;
+	
+	public Chromosome(Integer[] chromosome) {
 		
 		this.chromosome = chromosome;
 		clashesPunished = HashBasedTable.create();
 		samedayPunished = HashBasedTable.create();
 		twodaysPunished = HashBasedTable.create();
+		threedaysPunished = new HashMap<IntTuple, Boolean>();
+		constraintViolations = new Constraint();
+		
+		List<Integer> timeslotOccurences = Lists.newArrayList(chromosome);
+		occurenceSet = HashMultiset.create(timeslotOccurences);
 	}
 	
-	public int[] getChromosome() {
+	public Integer[] getChromosome() {
 		return chromosome;
 	}
 	
-	public void setChromosome(int[] chromosome) {
+	public void setChromosome(Integer[] chromosome) {
 		this.chromosome = chromosome;
 	}
 	
-	public int getClashPunish() {
-		return clashPunish;
+	public Constraint getConstraintViolations() {
+		return constraintViolations;
 	}
 	
-	public void setClashPunish(int clashPunish) {
-		this.clashPunish = clashPunish;
+	public void setConstraintViolations(Constraint constraintViolations) {
+		this.constraintViolations = constraintViolations;
 	}
 	
-	public int getSameDayPunish() {
-		return sameDayPunish;
-	}
-	
-	public void setSameDayPunish(int sameDayPunish) {
-		this.sameDayPunish = sameDayPunish;
-	}
-	
-	public int getTwoDayPunish() {
-		return twoDayPunish;
-	}
-	
-	public void setTwoDayPunish(int twoDayPunish) {
-		this.twoDayPunish = twoDayPunish;
-	}
-	
-	public int getThreeDayPunish() {
-		return threeDayPunish;
-	}
-	
-	public void setThreeDayPunish(int threeDayPunish) {
-		this.threeDayPunish = threeDayPunish;
-	}
-	
-	public int getTotalPunishment() {
-		return totalPunishment;
-	}
-
-	public void setTotalPunishment(int totalPunishment) {
-		this.totalPunishment = totalPunishment;
-	}
-
 	public double getFitness() {
 		return fitness;
 	}
@@ -79,7 +62,7 @@ public class Chromosome {
 	public void setFitness(double fitness) {
 		this.fitness = fitness;
 	}
-
+	
 	public Table<Integer, Integer, Boolean> getClashesPunished() {
 		return clashesPunished;
 	}
@@ -103,5 +86,28 @@ public class Chromosome {
 	public void setTwodaysPunished(Table<Integer, Integer, Boolean> twodaysPunished) {
 		this.twodaysPunished = twodaysPunished;
 	}
+	
+	public HashMap<IntTuple, Boolean> getThreedaysPunished() {
+		return threedaysPunished;
+	}
 
+	public void setThreedaysPunished(HashMap<IntTuple, Boolean> threedaysPunished) {
+		this.threedaysPunished = threedaysPunished;
+	}
+	
+	public Multiset<Integer> getOccurenceSet() {
+		return occurenceSet;
+	}
+
+	public void setOccurenceSet(Multiset<Integer> occurenceSet) {
+		this.occurenceSet = occurenceSet;
+	}
+
+	public int getTotalPunishment() {
+		return totalPunishment;
+	}
+
+	public void setTotalPunishment(int totalPunishment) {
+		this.totalPunishment = totalPunishment;
+	}
 }

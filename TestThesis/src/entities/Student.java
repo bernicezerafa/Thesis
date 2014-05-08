@@ -17,6 +17,10 @@ public class Student {
 	public static final String FLD_ID = "ID";
 	public static final String FLD_STUDENTID = "StudentID";
 	
+	public Student(String studentID) {
+		this.studentID = studentID;
+	}
+	
 	public String getStudentID() {
 		return studentID;
 	}
@@ -38,20 +42,19 @@ public class Student {
 			query.append(TBL_STUDENTS);
 			query.append(" ( ");
 			query.append(FLD_STUDENTID);
-			query.append(" ) ");
-			
 			query.append(") VALUES (?)");
 		
 			pstmt = conn.prepareStatement(query.toString(), Statement.RETURN_GENERATED_KEYS);
 			pstmt.setString(1, studentID);
-
+			
+			pstmt.executeUpdate();
 		}
 		catch (SQLException e)
 		{
-      		System.out.println("[StudyUnits.insertStudent()]: " + e.getMessage());
+      		System.out.println("[Student.insertStudent()]: " + e.getMessage());
 		}		
 	}
-
+	
 	public static ArrayList<String> getStudentSuggestions(Connection conn, String pattern) {
 	
 		StringBuffer query = null;
@@ -64,11 +67,15 @@ public class Student {
    	    	
    	    	query.append("SELECT * \nFROM ");
    			query.append(TBL_STUDENTS);
-   			query.append("\nWHERE ");			
-   			query.append(FLD_STUDENTID);
-   			query.append(" LIKE '");
-   			query.append(pattern);
-   			query.append("%'");
+   			
+   			if (pattern != null)
+   			{
+   	   			query.append("\nWHERE ");			
+   	   			query.append(FLD_STUDENTID);
+   	   			query.append(" LIKE '%");
+   	   			query.append(pattern);
+   	   			query.append("%'");
+   			}
    			
    			stmt = conn.createStatement();
    	    	ResultSet rs = stmt.executeQuery(query.toString());
@@ -78,7 +85,7 @@ public class Student {
    	    	}
    	    	
    	    } catch (SQLException e) {
-      		System.out.println("[Students.getStudentSuggestions(String pattern)]: " + e.getMessage());
+      		System.out.println("[Student.getStudentSuggestions(String pattern)]: " + e.getMessage());
         
    	    } finally {
    	    	SQLHelper.closeConnection(conn);
@@ -86,4 +93,37 @@ public class Student {
 		
 		return studentIds;
 	}
+	
+	public static boolean studentExists(Connection conn, String studentID) {
+		
+		StringBuffer query = null;
+		Statement stmt = null;
+		
+		try {
+   			
+   	    	query = new StringBuffer();
+   	    	
+   	    	query.append("SELECT * \nFROM ");
+   			query.append(TBL_STUDENTS);
+ 	   		query.append("\nWHERE ");			
+   	   		query.append(FLD_STUDENTID);
+   	   		query.append(" = '");
+   	   		query.append(studentID);
+   	   		query.append("'");
+   		
+   			stmt = conn.createStatement();
+   	    	ResultSet rs = stmt.executeQuery(query.toString());
+
+   	    	while (rs.next()) {
+   	    		return true;
+   	    	}
+   	    	
+   	    } catch (SQLException e) {
+      		System.out.println("[Student.studentExists(String studentID)]: " + e.getMessage());
+        
+   	    } 
+		
+		return false;
+	}
+	
 }

@@ -1,9 +1,12 @@
 package thesis.timetable_generation;
 
+import java.io.Serializable;
 import java.util.Date;
 
-public class InputParameters {
+public class InputParameters implements Serializable {
 
+	private static final long serialVersionUID = 1L;
+	
 	private int semester;
 	private Date startDate;
 	private Date endDate;
@@ -16,6 +19,12 @@ public class InputParameters {
 	private int wednesdayTimeslots;
 	private int thursdayTimeslots;
 	private int fridayTimeslots;
+	
+	private int noOfTimeslots;
+	private int noOfDayExams;
+	private int noOfEveningExams;
+	private int noOfEveningTimeslots;
+	private int noOfDayTimeslots;
 	
 	public int getSemester() {
 		return semester;
@@ -111,5 +120,49 @@ public class InputParameters {
 	
 	public void setFridayTimeslots(int fridayTimeslots) {
 		this.fridayTimeslots = fridayTimeslots;
+	}
+	
+	public int getNoOfTimeslots() {
+		return noOfTimeslots;
+	}
+
+	public void setNoOfTimeslots(int noOfTimeslots) {
+		this.noOfTimeslots = noOfTimeslots;
+	}
+	
+	public int getNoOfEveningTimeslots() {
+		return noOfEveningTimeslots;
+	}
+
+	public void setNoOfEveningTimeslots(int noOfEveningTimeslots) {
+		this.noOfEveningTimeslots = noOfEveningTimeslots;
+	}
+
+	public int getNoOfDayTimeslots() {
+		return noOfDayTimeslots;
+	}
+
+	public void setNoOfDayTimeslots(int noOfDayTimeslots) {
+		this.noOfDayTimeslots = noOfDayTimeslots;
+	}
+
+	public int getNoOfDayExams() {
+		return noOfDayExams;
+	}
+
+	public void setNoOfDayExams(int noOfDayExams) {
+		this.noOfDayExams = noOfDayExams;
+	}
+
+	public int getNoOfEveningExams() {
+		return noOfEveningExams;
+	}
+
+	public void setNoOfEveningExams(int noOfEveningExams) {
+		this.noOfEveningExams = noOfEveningExams;
+	}
+
+	public boolean isIncludeSaturdays() {
+		return includeSaturdays;
 	}
 }

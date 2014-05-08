@@ -29,9 +29,7 @@ public class EventsManager extends DHXEventsManager {
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public Iterable getEvents() {
-		
-		//setDynFilter(false);
-		
+				
 		Connection conn = null;
 		DHXEventsManager.date_format = "yyyy-MM-dd HH:mm:ss";
    		List<DHXEvent> events = new ArrayList<DHXEvent>();
@@ -59,15 +57,15 @@ public class EventsManager extends DHXEventsManager {
    				query.append(" s JOIN ");
    				query.append(TimetableEvent.TBL_EVENTS);
    				query.append(" t ON s.");
-   				query.append(StudyUnit.FLD_UNITCODE);
+   				query.append(StudyUnit.FLD_ID);
    				query.append(" = t.");
-   				query.append(TimetableEvent.FLD_UNITCODE);
+   				query.append(TimetableEvent.FLD_EXAMID);
    				query.append("\nWHERE s.");
    				
    				if (year.equalsIgnoreCase("evening"))
    				{
    	   	    		//SELECT t.*
-   	   	    		//FROM dbo.STUDYUNITS s JOIN dbo.TIMETABLE_EVENTS t ON s.UnitCode = t.UnitCode
+   	   	    		//FROM dbo.STUDYUNITS s JOIN dbo.TIMETABLE_EVENTS t ON s.ID = t.ExamID
    	   	    		//WHERE s.Evening = 'true';
    					
    					query.append(StudyUnit.FLD_EVENING);
@@ -78,7 +76,7 @@ public class EventsManager extends DHXEventsManager {
    				else if (year.equalsIgnoreCase("fulltime"))
    				{
    	   	    		//SELECT t.*
-   	   	    		//FROM dbo.STUDYUNITS s JOIN dbo.TIMETABLE_EVENTS t ON s.UnitCode = t.UnitCode
+   	   	    		//FROM dbo.STUDYUNITS s JOIN dbo.TIMETABLE_EVENTS t ON s.ID = t.ExamID
    	   	    		//WHERE s.Evening = 'false';
    					
    					query.append(StudyUnit.FLD_EVENING);
@@ -89,7 +87,7 @@ public class EventsManager extends DHXEventsManager {
    				else
    				{
    	   	    		//SELECT t.*
-   	   	    		//FROM dbo.STUDYUNITS s JOIN dbo.TIMETABLE_EVENTS t ON s.UnitCode = t.UnitCode
+   	   	    		//FROM dbo.STUDYUNITS s JOIN dbo.TIMETABLE_EVENTS t ON s.ID = t.ExamID
    	   	    		//WHERE s.Year LIKE '%1%';
    					
    					query.append(StudyUnit.FLD_YEAR);
@@ -102,17 +100,17 @@ public class EventsManager extends DHXEventsManager {
    	    	{
    	    		//SELECT t.*
    	   	    	//FROM dbo.TIMETABLE_EVENTS t JOIN dbo.STUDENT_EXAMS s 
-   	   	    	//ON t.UNITCODE = s.UNITCODE
-   	   	    	//WHERE s.StudentID = '306993M/1'
+   	   	    	//ON t.ExamID = s.ExamID
+   	   	    	//WHERE s.StudentID = '306993M'
    	    		
    	    		query.append("SELECT t.* \nFROM ");
    	    		query.append(TimetableEvent.TBL_EVENTS);
    	    		query.append(" t JOIN ");
    	    		query.append(StudentExams.TBL_STUDENTEXAMS);
    	    		query.append(" s ON t.");
-   	    		query.append(TimetableEvent.FLD_UNITCODE);
+   	    		query.append(TimetableEvent.FLD_EXAMID);
    	    		query.append(" = s.");
-   	    		query.append(StudentExams.FLD_UNITCODE);
+   	    		query.append(StudentExams.FLD_EXAMID);
    	    		query.append("\nWHERE s.");
    	    		query.append(StudentExams.FLD_STUDENTID);
    	    		query.append(" LIKE '");
@@ -156,23 +154,26 @@ public class EventsManager extends DHXEventsManager {
    				pstmt = TimetableEvent.updateEvent(conn, event);
    				
             } else if (status == DHXStatus.INSERT) {
-            	
-            	int examID = TimetableEvent.getStudyUnitID(conn, Integer.toString(event.getId()));            	
-            	pstmt = TimetableEvent.insertEvent(conn, event, examID);
+            	pstmt = TimetableEvent.insertEvent(conn, event, -1);
             	
             } else if (status == DHXStatus.DELETE) {
             	pstmt = TimetableEvent.deleteEvent(conn, event);
             }
 
-            if (pstmt != null) {
+            if (pstmt != null) 
+            {
             	pstmt.executeUpdate();
-                rs = pstmt.getGeneratedKeys();
+            	rs = pstmt.getGeneratedKeys();
                 
-                if (rs.next()) {
-                	event.setId(rs.getInt(1));
-                }
+	            if (rs.next()) 
+	            {    
+	            	int eventId = rs.getInt(1);
+	                
+	            	if (status == DHXStatus.INSERT)
+	            		event.setId(eventId);
+	            }
             }
-
+            
       	} catch (SQLException e) {
       		System.out.println("[EventsManager.saveEvent() - " + status.name() + "]: " + e.getMessage());
       		e.printStackTrace();

@@ -8,8 +8,9 @@ import java.sql.Statement;
 import java.util.ArrayList;
 
 public class StudyUnit {
-
-	private int id;
+	
+	private int examPos; // mapped to examID
+	private int examID;
 	private String unitCode;
 	private String title;
 	private String year;
@@ -39,8 +40,8 @@ public class StudyUnit {
 	}
 	
 	public StudyUnit(String unitCode, String title, String year, short semester, float examLength, 
-					 short noOfStudents, String department, short credits, boolean evening, String venue) {
-		
+			 short noOfStudents, String department, short credits, boolean evening, String venue) {
+
 		this.unitCode = unitCode;
 		this.title = title;
 		this.year = year;
@@ -53,12 +54,36 @@ public class StudyUnit {
 		this.venue = venue;
 	}
 	
-	public int getID() {
-		return id;
+	public StudyUnit(int examID, String unitCode, String title, String year, short semester, float examLength, 
+					 short noOfStudents, String department, short credits, boolean evening, String venue) {
+		
+		this.examID = examID;
+		this.unitCode = unitCode;
+		this.title = title;
+		this.year = year;
+		this.semester = semester;
+		this.examLength = examLength;
+		this.noOfStudents = noOfStudents;
+		this.department = department;
+		this.credits = credits;
+		this.evening = evening;
+		this.venue = venue;
 	}
 	
-	public void setID(int id) {
-		this.id = id;
+	public int getExamID() {
+		return examID;
+	}
+	
+	public void setExamID(int examID) {
+		this.examID = examID;
+	}
+	
+	public int getExamPos() {
+		return examPos;
+	}
+	
+	public void setExamPos(int examPos) {
+		this.examPos = examPos;
 	}
 	
 	public String getUnitCode() {
@@ -145,6 +170,7 @@ public class StudyUnit {
 	{ 		
 		StringBuffer query = null; 
 		PreparedStatement pstmt = null;
+		ResultSet generatedKeys = null;
 		
 		try
 		{
@@ -187,6 +213,11 @@ public class StudyUnit {
 			pstmt.setString(10, venue);
 			
 			pstmt.executeUpdate();
+			
+			generatedKeys = pstmt.getGeneratedKeys();
+	        if (generatedKeys.next()) {
+	            examID = generatedKeys.getInt(1);
+	        }
 		}
 		catch (SQLException e)
 		{
@@ -251,34 +282,13 @@ public class StudyUnit {
       		System.out.println("[StudyUnits.updateStudyUnit()]: " + e.getMessage());
 		}		
 	}
-
-	public static void deleteStudyUnit(Connection conn, String unitCode)
-	{
-		StringBuffer query = null; 
-		Statement stmt = null;
-		
-		try
-		{
-			query = new StringBuffer();
-	        
-			query.append("DELETE FROM ");
-			query.append(TBL_STUDYUNITS);
-			query.append(" WHERE ");
-			query.append(FLD_UNITCODE);
-			query.append(" = '");
-			query.append(unitCode);
-			query.append("'");
-			
-			stmt = conn.createStatement();
-			stmt.executeUpdate(query.toString());
-		} 
-		catch (SQLException e)
-		{
-      		System.out.println("[StudyUnit.deleteStudyUnit()]: " + e.getMessage());
-		}
-	}	
 	
-	public static StudyUnit getStudyUnit(Connection conn, String unitCode)
+	// SELECT s.*
+	// FROM dbo.TIMETABLE_EVENTS t JOIN dbo.STUDYUNITS s
+	// ON t.EXAMID = s.ID
+	// WHERE t.ID = eventID
+	
+	public static StudyUnit getStudyUnit(Connection conn, int eventId)
 	{	
 		StringBuffer query = null; 
 		Statement stmt = null;
@@ -288,12 +298,18 @@ public class StudyUnit {
 		{
 			query = new StringBuffer();
 	        
-			query.append("SELECT * FROM ");
-			query.append(TBL_STUDYUNITS);
-			query.append(" WHERE ");
-			query.append(FLD_UNITCODE);
+			query.append("SELECT s.* FROM ");
+			query.append(TimetableEvent.TBL_EVENTS);
+			query.append(" t JOIN ");
+			query.append(StudyUnit.TBL_STUDYUNITS);
+			query.append(" s ON t.");
+			query.append(TimetableEvent.FLD_EXAMID);
+			query.append(" = s.");
+			query.append(StudyUnit.FLD_ID);
+			query.append("\nWHERE t.");
+			query.append(TimetableEvent.FLD_ID);
 			query.append(" = '");
-			query.append(unitCode);
+			query.append(eventId);
 			query.append("'");
 			
 			stmt = conn.createStatement();
@@ -301,6 +317,7 @@ public class StudyUnit {
 			
 			while (rs.next())
 			{
+				int examID = rs.getInt(FLD_ID);
 				String unitcode = rs.getString(FLD_UNITCODE);
 				String title = rs.getString(FLD_TITLE);
 				String year = rs.getString(FLD_YEAR);
@@ -312,7 +329,7 @@ public class StudyUnit {
 				boolean evening = rs.getBoolean(FLD_EVENING);
 				String venue = rs.getString(FLD_VENUE);
 			
-				studyUnit = new StudyUnit(unitcode, title, year, semester, examLength, noOfStudents, department, credits, evening, venue);
+				studyUnit = new StudyUnit(examID, unitcode, title, year, semester, examLength, noOfStudents, department, credits, evening, venue);
 			}
 		} 
 		catch (SQLException e)
@@ -323,7 +340,12 @@ public class StudyUnit {
 		return studyUnit;
 	}
 	
-	public static ArrayList<String> getStudyUnitSuggestions(Connection conn, String pattern)
+	// SELECT UnitCode, Evening
+	// FROM dbo.StudyUnits
+	// WHERE UnitCode LIKE '%pattern%'
+	// AND Semester = 'semester'
+	
+	public static ArrayList<String> getStudyUnitSuggestions(Connection conn, String pattern, int semester)
 	{	
 		StringBuffer query = null; 
 		Statement stmt = null;
@@ -335,24 +357,42 @@ public class StudyUnit {
 	        
 			query.append("SELECT ");
 			query.append(FLD_UNITCODE);
-			query.append(" FROM ");
-			query.append(TBL_STUDYUNITS);
-			query.append(" WHERE ");
-			query.append(FLD_UNITCODE);
-			query.append(" LIKE '");
-			query.append(pattern);
-			query.append("%' AND ");
+			query.append(", ");
 			query.append(FLD_EVENING);
-			query.append(" = '");
-			query.append(false);
-			query.append("'");
+			query.append("\nFROM ");
+			query.append(TBL_STUDYUNITS);
+			
+			if (pattern != null)
+			{
+				query.append("\nWHERE ");
+				query.append(FLD_UNITCODE);
+				query.append(" LIKE '%");
+				query.append(pattern);
+				query.append("%'");
+			}
+
+			if (semester != -1)
+			{
+				query.append(" AND ");
+				query.append(FLD_SEMESTER);
+				query.append(" = '");
+				query.append(semester);
+				query.append("'");
+			}
 			
 			stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(query.toString());
 			
 			while (rs.next())
 			{
-				studyUnitCodes.add(rs.getString(FLD_UNITCODE));
+				String studyUnitCode = rs.getString(FLD_UNITCODE);
+				boolean evening = rs.getBoolean(FLD_EVENING);
+				
+				if (evening)
+					studyUnitCodes.add(studyUnitCode + " - evening");
+				else
+					studyUnitCodes.add(studyUnitCode);
+				
 			}
 		} 
 		catch (SQLException e)
@@ -363,7 +403,11 @@ public class StudyUnit {
 		return studyUnitCodes;
 	}
 	
-	public static int getStudyUnitID(Connection conn, String unitCode, int semester)
+	// SELECT ID
+	// FROM dbo.StudyUnits
+	// WHERE UnitCode = 'CIS3087' AND Evening = 'true'
+	
+	public static int getStudyUnitID(Connection conn, String unitCode, boolean evening)
 	{	
 		StringBuffer query = null; 
 		Statement stmt = null;
@@ -382,13 +426,9 @@ public class StudyUnit {
 			query.append(" = '");
 			query.append(unitCode);
 			query.append("' AND ");
-			query.append(StudyUnit.FLD_SEMESTER);
-			query.append(" = '");
-			query.append(semester);
-			query.append("' AND ");
 			query.append(StudyUnit.FLD_EVENING);
 			query.append(" = '");
-			query.append(false);
+			query.append(evening);
 			query.append("'");
 			
 			stmt = conn.createStatement();
@@ -406,5 +446,82 @@ public class StudyUnit {
 		
 		return id;
 	}
-
+	
+	// SELECT COUNT(*) AS 'noOfEvening'
+	// FROM dbo.StudyUnits
+	// WHERE Evening = 'true'
+	
+	public static int getNoOfEveningExams(Connection conn)
+	{
+		StringBuffer query = null; 
+		Statement stmt = null;
+		int noOfEveningExams = -1;
+		
+		try
+		{
+			query = new StringBuffer();
+	        
+			query.append("SELECT COUNT(*) AS 'noOfEvening' \nFROM ");
+			query.append(TBL_STUDYUNITS);
+			query.append("\nWHERE ");
+			query.append(FLD_EVENING);
+			query.append(" = '");
+			query.append(true);
+			query.append("'");
+			
+			stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(query.toString());
+			
+			while (rs.next())
+			{
+				noOfEveningExams = rs.getInt("noOfEvening");
+			}
+		} 
+		catch (SQLException e)
+		{
+      		System.out.println("[StudyUnit.getNoOfEveningExams()]: " + e.getMessage());
+		}
+		
+		return noOfEveningExams;
+	}
+	
+	// SELECT Evening
+	// FROM dbo.StudyUnits
+	// WHERE ID = '12'
+	
+	public static boolean isEvening(Connection conn, int examID)
+	{
+		StringBuffer query = null; 
+		Statement stmt = null;
+		boolean evening = false;
+		
+		try
+		{
+			query = new StringBuffer();
+	        
+			query.append("SELECT ");
+			query.append(FLD_EVENING);
+			query.append("\nFROM ");
+			query.append(TBL_STUDYUNITS);
+			query.append("\nWHERE ");
+			query.append(FLD_ID);
+			query.append(" = '");
+			query.append(examID);
+			query.append("'");
+			
+			stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(query.toString());
+			
+			while (rs.next())
+			{
+				evening = rs.getBoolean(FLD_EVENING);
+			}
+		} 
+		catch (SQLException e)
+		{
+      		System.out.println("[StudyUnit.getNoOfEveningExams()]: " + e.getMessage());
+		}
+		
+		return evening;
+	}
 }
