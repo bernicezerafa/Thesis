@@ -1,0 +1,143 @@
+#back_btn, #back2_btn
+{
+	background-color: white;
+	color: #454544;
+	text-shadow: none;
+}
+
+body.loading 
+{
+    overflow: hidden;   
+}
+
+body.loading .modal 
+{
+    display: block;
+}
+
+.button_divs
+{
+	width: 100%;
+	bottom: 0;
+	left: 0;
+	height: 50px;
+	position: absolute;
+	text-align: right;
+}
+
+div.ui-datepicker
+{
+ 	font-size: 10px;
+}
+
+html
+{
+	width: 100%;
+	height: 100%;
+}
+
+.justify
+{
+	text-align:justify;	
+}
+
+#loading-msg
+{
+	text-align: center;
+	font-family: calibri;
+	font-size: 16px;
+	margin-top: 50px;
+}
+
+.modal 
+{
+	display: none;
+	border: black 2px solid;
+	position: absolute;
+	z-index: 1000;
+	left: 50%;
+	top: 50%;
+	margin: -100px 0 0 -250px;
+	height: 200px;
+	width: 500px;
+	background: rgba( 255, 255, 255, .9) 
+				url('../images/ajax-loader.gif') 
+				50% 70% 
+				no-repeat;
+}
+
+.next_btns
+{
+	margin-right: 12px;
+	padding: 8px 20px;
+	font-weight: bold;
+	border-radius: 5px;
+	font-family: Calibri;
+	font-size: 14px;
+	border: 1px solid #CECECE;
+	background-color: #22A1BC;
+	color: white;
+	text-shadow: 0px -1px 0px #6F6F6F;
+}
+
+#overlay_div
+{
+	display: none;
+	opacity: 0.1;
+	background: #000;
+	width: 100%;
+	height: 100%;
+	z-index: 10;
+	top: 0;
+	left: 0;
+	position: fixed;
+}
+
+#saturday_table, #weekday_table
+{
+	border-collapse: separate;
+	border-spacing: 20px 5px;
+}
+
+#saturday_table tr:first-child, #weekday_table tr:first-child
+{
+	display:block;
+}
+
+.saturday_trs, .weekday_trs
+{
+	display:none;
+}
+
+#saturday_ts, #weekday_ts
+{
+	width:50px;
+}
+
+section
+{
+	border: solid 2px #6F6F6F;
+	border-radius: 5px;
+	font-family: "Calibri";
+	font-size: 16px;
+	padding: 20px 50px 20px 50px;
+	width: 600px;
+	height: 300px;
+	position: absolute;
+	left: 0;
+	top: 0;
+	margin-left: 300px;
+	margin-top: 150px;
+}
+
+#startdate, #enddate
+{
+	background-color: white;
+	background-image: url("../codebase/imgs_dhx_terrace/calendar.gif");
+	background-repeat: no-repeat;
+	background-position: 138px;
+	background-size: 18px;
+	padding-right: 5px;
+	padding-left: 5px;
+	border-radius: 5px;
+}
