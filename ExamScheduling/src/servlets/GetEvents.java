@@ -27,21 +27,21 @@ import org.json.simple.JSONObject;
 
 import thesis.timetable_generation.Chromosome;
 import thesis.timetable_generation.Constraint;
+import thesis.timetable_generation.ExamIndexMaps;
 import thesis.timetable_generation.ExamMap;
-import thesis.timetable_generation.ReadData;
 import entities.TimetableEvent;
 
 public class GetEvents extends HttpServlet {
 	private static final long serialVersionUID = 1L;
     private Connection conn = null;
-    private HashMap<Integer, Integer> indexExamId;
-	
+    //private HashMap<Integer, Integer> indexExamId;
+	private ExamIndexMaps examIndexMaps = null;
+    
     /**
      * @see HttpServlet#HttpServlet()
      */
     public GetEvents() {
         super();
-        // TODO Auto-generated constructor stub
     }
     
 	public List<String> getColorShades(Color color, int noOfSameViolations) 
@@ -105,54 +105,47 @@ public class GetEvents extends HttpServlet {
 		return -1;
 	}
 	
-    // getEventIds - true when return ArrayList need to be filled with event id's since modifications are being
-    // 				 done on client side
-    //			   - false when ArrayList need to be filled with exam id's to examine timetable
-    public static ArrayList<Integer> getClashingExams(Connection conn, int eventID, boolean getEventIds) 
+    public static ArrayList<Integer> getClashingExams(Connection conn, int eventID) 
     {	
-    	int studyUnitID = TimetableEvent.getStudyUnitID(conn, eventID);
-    	HashMap<Integer, Integer> indexExamId = FileHelper.getIndexExamId();
-		int examIndex = indexExamId.get(studyUnitID);
-		
-		HashMap<ExamMap, ArrayList<String>> clashMatrix = FileHelper.getClashesMatrix();
+    	ExamIndexMaps examIndexMaps = FileHelper.getExamIndexMaps();
+    	HashMap<ExamMap, ArrayList<String>> clashMatrix = FileHelper.getClashesMatrix();
+    	
+    	int examID = TimetableEvent.getStudyUnitID(conn, eventID);
+    	int examIndex = examIndexMaps.getExamIDIndex().get(examID);
 		
 		ArrayList<Integer> clashingExams = new ArrayList<Integer>();
+		int noOfIndexes = examIndexMaps.getNoOfIndexes();
 		
-		for (int i=0; i < clashMatrix.size(); i++)
-		{
+		for (int i=0; i < noOfIndexes; i++) {
+			ExamMap examMap = null;
+			if (i > examIndex) examMap = ExamMap.getExamRel(examIndex, i);
+			else examMap = ExamMap.getExamRel(i, examIndex);
+			
 			// if there is a clash between exam clicked and exam i
-			if (clashMatrix.get(new ExamMap(examIndex, i)) != null)
-			{
-				// get exam ID by index of that exam
-				int clashedExamID = ReadData.getKeyByValue(indexExamId, i);
+			if (clashMatrix.get(examMap) != null) {
 				
-				if (getEventIds)
-				{
-					int eventClashID = TimetableEvent.getEventID(conn, clashedExamID);
+				// get exam ID by index of that exam
+				List<Integer> clashedExamIDs = examIndexMaps.getIndexExamID().get(i);
+				for (Integer clash: clashedExamIDs) {
+					int eventClashID = TimetableEvent.getEventID(conn, clash);
 					clashingExams.add(eventClashID);
-				}
-				else
-				{
-					clashingExams.add(clashedExamID);
 				}
 			}
 		}
     	
+		clashingExams.add(eventID);
 		return clashingExams;
     }
     
-    public int getEventID(int examPos)
+    public int getEventID(int examID)
     {
-		int eventID = -1;
-		if (examPos != -1)
-		{
-			int exam2ID = ReadData.getKeyByValue(indexExamId, examPos);
-		    eventID = TimetableEvent.getEventID(conn, exam2ID);
-		}
-		
-		return eventID;
+    	int examIndex = examIndexMaps.getExamIDIndex().get(examID);
+    	
+    	if (examIndex != -1)
+    		return TimetableEvent.getEventID(conn, examID);
+    	else return -1;
     }
-    
+        
     public static <K,V extends Comparable<? super V>> List<Entry<K, V>> entriesSortedByValues(Map<K,V> map) 
     {
 		List<Entry<K,V>> sortedEntries = new ArrayList<Entry<K,V>>(map.entrySet());
@@ -177,7 +170,7 @@ public class GetEvents extends HttpServlet {
     	JSONArray violationColorMap = new JSONArray();
     	
     	conn = SQLHelper.getConnection();
-    	indexExamId = FileHelper.getIndexExamId();
+    	examIndexMaps = FileHelper.getExamIndexMaps();
     	
     	Chromosome chromosome = FileHelper.getBestChromosome();
     	HashMap<ExamMap, ArrayList<String>>[] violationMap = chromosome.getViolationMap();
@@ -292,9 +285,7 @@ public class GetEvents extends HttpServlet {
 				else
 				{
 					int eventID = Integer.parseInt(request.getParameter("eventID"));
-					
-					boolean getEventIds = true;
-					ArrayList<Integer> clashingExams = getClashingExams(conn, eventID, getEventIds);
+					ArrayList<Integer> clashingExams = getClashingExams(conn, eventID);
 					JSONObject json = new JSONObject();
 					
 					for (int i=0; i< clashingExams.size(); i++)

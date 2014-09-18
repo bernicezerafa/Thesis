@@ -133,7 +133,7 @@
 		
 		<div class="modal">
 			<p id="loading-msg"> 
-				Please wait while timetable is being generated. This might take up to 5-7 minutes...
+				Generating Timetable. Please Wait...
 			</p>
 		</div>
 		<div id="overlay_div"></div>

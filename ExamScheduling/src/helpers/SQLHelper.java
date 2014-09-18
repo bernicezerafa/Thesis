@@ -12,7 +12,7 @@ public class SQLHelper
 	/** The JDBC driver name */ 
 	private static final String JDBC_DRIVER = "com.microsoft.sqlserver.jdbc.SQLServerDriver"; 
 	/** The database URL */ 
-	private static final String DATABASE_URL = "jdbc:sqlserver://localhost:1433;databaseName=FacultyICT;SelectMethod=cursor;"; 
+	private static final String DATABASE_URL = "jdbc:sqlserver://localhost:1433;databaseName=ExamScheduling;SelectMethod=cursor;"; 
 	/** The database user-name */ 
 	private static final String DATABASE_USERNAME = "sa"; 
 	/** The database password */ 

@@ -149,6 +149,12 @@ body.loading .modal
 	background-color: white;
 }
 
+.color_cell
+{
+	width:50px;
+	padding-top: 3px;
+}
+
 .color_div
 {
 	width: 20px;
@@ -237,7 +243,7 @@ body.loading .modal
 	text-align: center;
 	position: absolute;
 	left: -45px;
-	z-index: -1;	
+	z-index: -1;
 }
 
 #dhx_minical_icon
@@ -425,6 +431,16 @@ div.ui-datepicker
 	font-weight: bold;
 }
 
+#footer_div
+{
+	position: fixed;
+	left: 0px;
+	bottom: 0px;
+	height: 30px;
+	width: 100%;
+	background: #E8E8E8;
+}
+
 #first-row
 {
 	line-height: 40px;
@@ -477,6 +493,11 @@ html, body, div#scheduler_here
     padding:0px;
     height:100%;
     overflow:hidden;
+}
+
+.info-cell
+{
+	width:200px;
 }
 
 .lightbox-buttons
@@ -596,6 +617,18 @@ html, body, div#scheduler_here
 	margin-left:28px;	
 }
 
+.status_cell
+{
+	width:20px;
+}
+
+#status_table
+{
+	text-align: center;
+	font-family: calibri;
+	font-size: 15px;
+}
+
 #studyunit_code
 {
 	margin-right:20px;
@@ -680,6 +713,12 @@ html, body, div#scheduler_here
     cursor: pointer;
     font-size: 12px;
     font-family: 'Calibri';
+}
+
+.ui-widget-overlay
+{
+	background: #aaaaaa url(images/ui-bg_flat_0_aaaaaa_40x100.png) 100% 100% !important;
+	opacity: .4 !important;
 }
 
 #units_choice

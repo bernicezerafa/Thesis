@@ -30,10 +30,12 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import thesis.timetable_generation.Chromosome;
+import thesis.timetable_generation.ExamMap;
 import thesis.timetable_generation.GeneticAlgorithm;
 import thesis.timetable_generation.Timeslot;
+import entities.ContemporaneousExams;
+import entities.Exam;
 import entities.StudentExams;
-import entities.StudyUnit;
 import entities.TimetableEvent;
 
 public class UpdateStudyUnit extends HttpServlet {
@@ -77,12 +79,69 @@ public class UpdateStudyUnit extends HttpServlet {
 		String getDetails = request.getParameter("get_details");
 		String studyUnitSuggest = request.getParameter("studyunit_auto");		
 		String search = request.getParameter("term");
+		String isContemporaneous = request.getParameter("isContemporaneous");
 		
 		Connection conn = SQLHelper.getConnection();
+
+		if (isContemporaneous != null) 
+		{
+			int eventId = Integer.parseInt(request.getParameter("eventId"));
+			int examId = TimetableEvent.getStudyUnitID(conn, eventId);
+			
+			JSONObject jo = new JSONObject();
+			
+			ArrayList<ExamMap> contempExams = ContemporaneousExams.getAllExamRelationships(conn);
+			ExamMap examMap = null;
+			ArrayList<String> examCodes = null;
+			ArrayList<Integer> eventIds = null;
+			
+			for (int i=0; i < contempExams.size(); i++) {
+				
+				if (examMap == null && contempExams.get(i).contains(examId)) {
+					
+					examCodes = new ArrayList<String>();
+					eventIds = new ArrayList<Integer>();
+					
+					examMap = contempExams.get(i);
+					i = 0;
+					
+				} else if (examMap != null) {
+					
+					if (contempExams.get(i).contains(examMap.get(1)) && contempExams.get(i).getData()[0] != examId) {
+						
+						for (int j=0; j < contempExams.get(i).getData().length; j++) {
+							
+							if (contempExams.get(i).getData()[j] != examMap.get(1)) {
+								examMap = ExamMap.getExamRel(examMap.getData()[0], examMap.getData()[1], contempExams.get(i).getData()[j]);
+							}
+						}
+					}
+				}
+			}
+			
+			if (examMap != null) {
+				for (int j=0; j < examMap.getData().length; j++) {
+					
+					String examCode = Exam.getStudyUnitCode(conn, examMap.getData()[j]);
+					int eventID = TimetableEvent.getEventID(conn, examMap.getData()[j]);
+					
+					examCodes.add(examCode);
+					eventIds.add(eventID);
+				}
+			}
+			
+			jo.put("examCodes", examCodes);
+			jo.put("eventIds", eventIds);
+						
+			response.setContentType("application/json");
+			response.setCharacterEncoding("UTF-8");
+			response.getWriter().write(jo.toJSONString());
+			return;
+		}
 		
 		if (search != null)
 		{
-			ArrayList<String> studyUnitCodes = StudyUnit.getStudyUnitSuggestions(conn, search, -1);				
+			ArrayList<String> studyUnitCodes = Exam.getStudyUnitSuggestions(conn, search, -1);				
 			JSONObject jo = new JSONObject();
 			
 			for (int i=0; i < studyUnitCodes.size(); i++)
@@ -101,7 +160,7 @@ public class UpdateStudyUnit extends HttpServlet {
 			String query = request.getParameter("query");
 			int semester = Integer.parseInt(request.getParameter("semester"));
 			
-			ArrayList<String> studyUnitCodes = StudyUnit.getStudyUnitSuggestions(conn, query, semester);				
+			ArrayList<String> studyUnitCodes = Exam.getStudyUnitSuggestions(conn, query, semester);				
 			JSONObject jo = new JSONObject();
 			
 			for (int i=0; i<studyUnitCodes.size(); i++)
@@ -154,9 +213,9 @@ public class UpdateStudyUnit extends HttpServlet {
 			boolean evening = Boolean.parseBoolean(request.getParameter("evening"));
 			String venue = request.getParameter("room");
 			
-			StudyUnit exam = new StudyUnit(examCode, examTitle, year, semester, examLength, noOfStudents, department, credits, evening, venue);
+			Exam exam = new Exam(examCode, examTitle, year, semester, examLength, noOfStudents, department, credits, evening, venue);
 						
-			if (StudyUnit.getStudyUnitID(conn, exam.getUnitCode(), exam.isEvening()) == -1)
+			if (Exam.getStudyUnitID(conn, exam.getUnitCode(), exam.isEvening()) == -1)
 			{
 				exam.insertStudyUnit(conn);
 				
@@ -175,11 +234,10 @@ public class UpdateStudyUnit extends HttpServlet {
 				Date startDate = null;
 				Date endDate = null;
 					
-				try 
-				{
+				try  {
 					startDate = sdf.parse(startString);
 					endDate = sdf.parse(endString);
-						
+					
 				} catch (ParseException ignore) {
 					System.out.println("Parse Exception save event: " + ignore.getMessage());
 				}
@@ -208,7 +266,7 @@ public class UpdateStudyUnit extends HttpServlet {
 			int eventId = Integer.parseInt(request.getParameter("event_id"));
 			
 			String tooltip = request.getParameter("tooltip");			
-			StudyUnit details = StudyUnit.getStudyUnit(conn, eventId);
+			Exam details = Exam.getStudyUnit(conn, eventId);
 			
 			JSONObject jo = new JSONObject();
 			jo.put("unitCode", details.getUnitCode());
@@ -229,7 +287,7 @@ public class UpdateStudyUnit extends HttpServlet {
 				JSONArray jsonArray = new JSONArray();
 				
 				String examCode = request.getParameter("exam_code");	
-				int studyUnitId = StudyUnit.getStudyUnitID(conn, examCode, details.isEvening());
+				int studyUnitId = Exam.getStudyUnitID(conn, examCode, details.isEvening());
 				ArrayList<String> studentsInExam = StudentExams.getStudentsInExam(conn, studyUnitId);
 
 				for (int i=0; i < studentsInExam.size(); i++)
@@ -250,35 +308,29 @@ public class UpdateStudyUnit extends HttpServlet {
 				
 				int minutes = DateHelper.getExamDurationInMinutes(eventStart, eventEnd);
 				int examID = TimetableEvent.getStudyUnitID(conn, eventId);
-				
 				HashMap<Integer, Double> fitnesses = new HashMap<Integer, Double>();
-				GeneticAlgorithm ga = new GeneticAlgorithm();
 				
 				Chromosome chrom = FileHelper.getBestChromosome();
 				Integer[] timetableState = chrom.getChromosome();
 				
-				HashMap<Integer, Integer> indexExamID = ga.getIndexExamID();
+				GeneticAlgorithm ga = new GeneticAlgorithm();
+				HashMap<Integer, Integer> examIdIndex = ga.getExamIdIndex();
 				HashMap<Integer, Timeslot> timeslotMap = ga.getTimeslotMap();
 
-				int examIndex = indexExamID.get(examID);
+				int examIndex = examIdIndex.get(examID);
 				int noOfTimeslots = FileHelper.getInputParameters().getNoOfTimeslots();
 				
 				// evaluate chromosome when this exam changes timeslot number
 				// add fitness for each chromosome in ArrayList
-				for (int i=0; i < noOfTimeslots; i++)
-				{
+				for (int i=0; i < noOfTimeslots; i++) {
+					
 					timetableState[examIndex] = i;
 					Chromosome chromosome = new Chromosome(timetableState);
-					
-					try
-					{
+					try {
 						chromosome = ga.evaluateChromosome(chromosome);
-					}
-					catch (Exception e)
-					{
+					} catch (Exception e) {
 						e.printStackTrace();
-					}
-					
+					}	
 					// timeslot number -> chromosome fitness map
 					fitnesses.put(i, chromosome.getFitness());
 				}
@@ -293,21 +345,16 @@ public class UpdateStudyUnit extends HttpServlet {
 				{
 					Timeslot timeslot = timeslotMap.get(randAccess.get(i).getKey());
 					
-					JSONObject timeslotObject = new JSONObject();
-					
 					String timeslotStart = timeslot.getStartDate();
-					timeslotObject.put("start_date", timeslotStart);
-					
 					DateTime startDateTime = DateHelper.formatDateTime(timeslotStart);
-
 					DateTime endTime = new DateTime(startDateTime);
 					endTime = endTime.plusMinutes(minutes);
 					
+					JSONObject timeslotObject = new JSONObject();
+					timeslotObject.put("start_date", timeslotStart);
 					timeslotObject.put("end_date", endTime.toString(DateHelper.geTimeFormatter()));
-					
 					jsonArray.add(timeslotObject);
-				}
-						    
+				} 
 		        jo.put("recommendations", jsonArray);
 			}
 			

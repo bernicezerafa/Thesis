@@ -19,17 +19,17 @@ import org.json.simple.JSONObject;
 
 import thesis.timetable_generation.Chromosome;
 import thesis.timetable_generation.Constraint;
+import thesis.timetable_generation.ExamIndexMaps;
 import thesis.timetable_generation.ExamMap;
-import thesis.timetable_generation.ReadData;
 import thesis.timetable_generation.Timeslot;
-import entities.StudyUnit;
+import entities.Exam;
 import entities.TimetableEvent;
 
 public class GetTimetableState extends HttpServlet 
 {	
 	private static final long serialVersionUID = 1L;
     private Connection conn = null;
-    private HashMap<Integer, Integer> indexExamID = null;
+    private ExamIndexMaps examIndexMaps = null;
     
     /**
      * @see HttpServlet#HttpServlet()
@@ -39,23 +39,44 @@ public class GetTimetableState extends HttpServlet
         super();
     }
 
-    public int getEventID(int examPos)
+    public int getEventID(int examID)
     {
-		int eventID = -1;
-		if (examPos != -1)
-		{
-			int exam2ID = ReadData.getKeyByValue(indexExamID, examPos);
-		    eventID = TimetableEvent.getEventID(conn, exam2ID);
-		}
-		
-		return eventID;
+    	int examIndex = examIndexMaps.getExamIDIndex().get(examID);
+    	
+    	if (examIndex != -1)
+    		return TimetableEvent.getEventID(conn, examID);
+    	else return -1;
     }
-   
+    
+    @SuppressWarnings("unchecked")
+	public JSONObject getStatusInfo(Chromosome chromosome)
+    {
+    	HashMap<ExamMap, ArrayList<String>>[] violationMap = chromosome.getViolationMap();
+    	JSONObject statusInfo = new JSONObject();
+    	
+    	int clashes = (violationMap[Constraint.CLASH_PUNISH] == null) ? 0: violationMap[Constraint.CLASH_PUNISH].size();
+    	statusInfo.put("clashes", clashes);
+
+    	int evening = (violationMap[Constraint.EVENING_PUNISH] == null) ? 0: violationMap[Constraint.EVENING_PUNISH].size();
+		statusInfo.put("evening", evening);
+
+    	int sameday = (violationMap[Constraint.SAME_DAY_PUNISH] == null) ? 0: violationMap[Constraint.SAME_DAY_PUNISH].size();
+		statusInfo.put("sameday", sameday);
+
+    	int twodays = (violationMap[Constraint.TWO_DAYS_PUNISH] == null) ? 0: violationMap[Constraint.TWO_DAYS_PUNISH].size();
+		statusInfo.put("twodays", twodays);
+		
+    	int threedays = (violationMap[Constraint.THREE_DAYS_PUNISH] == null) ? 0: violationMap[Constraint.THREE_DAYS_PUNISH].size();
+		statusInfo.put("threedays", threedays);
+		
+		return statusInfo;
+    }
+    
     @SuppressWarnings("unchecked")
 	public JSONArray getViolations(Chromosome chromosome)
     {
     	JSONArray allViolations = new JSONArray();
-		HashMap<ExamMap, ArrayList<String>>[] violationMap = chromosome.getViolationMap();
+    	HashMap<ExamMap, ArrayList<String>>[] violationMap = chromosome.getViolationMap();
 		
 		for (int index = 0; index < violationMap.length; index++)
 		{
@@ -81,7 +102,7 @@ public class GetTimetableState extends HttpServlet
 					{
 						JSONObject exam = new JSONObject();
 						int eventId = getEventID(examsArr[i]);
-						StudyUnit unit = StudyUnit.getStudyUnit(conn, eventId);		
+						Exam unit = Exam.getStudyUnit(conn, eventId);		
 						Timeslot timeslot = TimetableEvent.getEventTimeslot(conn, eventId);
 						
 						exam.put("unitCode", unit.getUnitCode());
@@ -118,15 +139,27 @@ public class GetTimetableState extends HttpServlet
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-				
-		Chromosome bestChromosome = FileHelper.getBestChromosome();
-		conn = SQLHelper.getConnection();
-		indexExamID = FileHelper.getIndexExamId();
 		
-		JSONArray allViolations = getViolations(bestChromosome);
-		response.setContentType("application/json");
-		response.setCharacterEncoding("UTF-8");
-		response.getWriter().write(allViolations.toJSONString());
+		Chromosome bestChromosome = FileHelper.getBestChromosome();
+		boolean getChromosomeStatus = Boolean.parseBoolean(request.getParameter("status_info"));
+		
+		if (getChromosomeStatus) {
+			
+			JSONObject statusInfo = getStatusInfo(bestChromosome);
+			response.setContentType("application/json");
+			response.setCharacterEncoding("UTF-8");
+			response.getWriter().write(statusInfo.toJSONString());
+					
+		} else {
+			
+			conn = SQLHelper.getConnection();
+			examIndexMaps = FileHelper.getExamIndexMaps();
+			
+			JSONArray allViolations = getViolations(bestChromosome);
+			response.setContentType("application/json");
+			response.setCharacterEncoding("UTF-8");
+			response.getWriter().write(allViolations.toJSONString());
+		}
 	}
 
 	/**

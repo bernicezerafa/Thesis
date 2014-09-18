@@ -18,7 +18,7 @@ import com.dhtmlx.planner.DHXEventsManager;
 import com.dhtmlx.planner.DHXStatus;
 
 import entities.StudentExams;
-import entities.StudyUnit;
+import entities.Exam;
 import entities.TimetableEvent;
 
 public class EventsManager extends DHXEventsManager {
@@ -53,11 +53,11 @@ public class EventsManager extends DHXEventsManager {
    	    	else if (year != null)
    	    	{   	    		
    	    		query.append("SELECT t.* \nFROM ");
-   				query.append(StudyUnit.TBL_STUDYUNITS);
+   				query.append(Exam.TBL_EXAMS);
    				query.append(" s JOIN ");
    				query.append(TimetableEvent.TBL_EVENTS);
    				query.append(" t ON s.");
-   				query.append(StudyUnit.FLD_ID);
+   				query.append(Exam.FLD_ID);
    				query.append(" = t.");
    				query.append(TimetableEvent.FLD_EXAMID);
    				query.append("\nWHERE s.");
@@ -65,10 +65,10 @@ public class EventsManager extends DHXEventsManager {
    				if (year.equalsIgnoreCase("evening"))
    				{
    	   	    		//SELECT t.*
-   	   	    		//FROM dbo.STUDYUNITS s JOIN dbo.TIMETABLE_EVENTS t ON s.ID = t.ExamID
+   	   	    		//FROM dbo.Exams s JOIN dbo.TIMETABLE_EVENTS t ON s.ID = t.ExamID
    	   	    		//WHERE s.Evening = 'true';
    					
-   					query.append(StudyUnit.FLD_EVENING);
+   					query.append(Exam.FLD_EVENING);
    					query.append(" = '");
    					query.append(true);
    					query.append("'");
@@ -76,10 +76,10 @@ public class EventsManager extends DHXEventsManager {
    				else if (year.equalsIgnoreCase("fulltime"))
    				{
    	   	    		//SELECT t.*
-   	   	    		//FROM dbo.STUDYUNITS s JOIN dbo.TIMETABLE_EVENTS t ON s.ID = t.ExamID
+   	   	    		//FROM dbo.Exams s JOIN dbo.TIMETABLE_EVENTS t ON s.ID = t.ExamID
    	   	    		//WHERE s.Evening = 'false';
    					
-   					query.append(StudyUnit.FLD_EVENING);
+   					query.append(Exam.FLD_EVENING);
    					query.append(" = '");
    					query.append(false);
    					query.append("'");   					
@@ -87,10 +87,10 @@ public class EventsManager extends DHXEventsManager {
    				else
    				{
    	   	    		//SELECT t.*
-   	   	    		//FROM dbo.STUDYUNITS s JOIN dbo.TIMETABLE_EVENTS t ON s.ID = t.ExamID
+   	   	    		//FROM dbo.Exams s JOIN dbo.TIMETABLE_EVENTS t ON s.ID = t.ExamID
    	   	    		//WHERE s.Year LIKE '%1%';
    					
-   					query.append(StudyUnit.FLD_YEAR);
+   					query.append(Exam.FLD_YEAR);
    					query.append(" LIKE '%");
    					query.append(year);
    					query.append("%'");

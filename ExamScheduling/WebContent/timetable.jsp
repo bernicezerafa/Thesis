@@ -5,8 +5,7 @@
 				 java.text.SimpleDateFormat,
 				 java.util.Calendar,
 				 java.util.Date,
-				 java.sql.Connection,
-				 entities.StudyUnit,
+				 java.sql.Connection,entities.Exam,
 				 entities.TimetableEvent,
 				 helpers.FileHelper,
 				 helpers.SQLHelper,
@@ -23,6 +22,14 @@
 	</head>
 	
 	<body>
+		<div id="dialog-move-confirm" title="Move Exams Together?">
+  			<p>
+  				<span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>
+  				This exam was required to be scheduled with <span id="exam_together"></span>. What do you
+  				want to do?
+  			</p>
+		</div>
+		
 		<div id="add_drop_section" class="can_drag">
 			<div id="switch_divs">
  				<h3>Add/Drop Student to Study Units</h3>
@@ -290,12 +297,11 @@
     		<input id="export_png" class="lightbox-buttons" type="button" value="Print" />
 			<input id="addDropStudents" class="lightbox-buttons" type="button" value="Add/Drop Students" />
 		</div>
-		
 		<div id="scheduler_here" class="dhx_cal_container">
 			<div class="dhx_cal_navline">
 				<div class="dhx_cal_prev_button">&nbsp;</div>
 				<div class="dhx_cal_next_button">&nbsp;</div>
-				<div class="dhx_cal_date"></div>
+				<div class="dhx_cal_date" style="left:-55px !important"></div>
 				<div class="dhx_cal_tab" name="day_tab" style="right:204px;"></div>
 				<div class="dhx_cal_tab" name="week_tab" style="right:140px;"></div>
 				<div id="month_tab" class="dhx_cal_tab" name="month_tab" style="right:76px;"></div>
@@ -316,8 +322,31 @@
 			</div>
 			<div class="dhx_cal_header"></div>
 			<div class="dhx_cal_data"></div>
-		</div>
+		</div>	
 		<div id="overlay_div"></div>
+		<div id="footer_div">
+			<table id="status_table">
+				<tbody>
+			   		<tr>
+				    	<td class="color_cell"><div id="color_salmon" class="color_div"></div></td>
+					    <td class="info_cell">Clashes</td>
+					    <td class="status_cell" id="clash_status">0</td>
+				    	<td class="color_cell"><div id="color_darkblue" class="color_div"></div></td>
+				    	<td class="info_cell">Evening exams in the morning</td>
+					 	<td class="status_cell" id="evening_status">0</td>
+					 	<td class="color_cell"><div id="color_deyork" class="color_div"></div></td>
+						<td class="info_cell">Same Day</td>
+					 	<td class="status_cell" id="sameday_status">0</td>
+						<td class="color_cell"><div id="color_lightorange" class="color_div"></div></td>
+					 	<td class="info_cell">Two Consecutive Days</td>
+					 	<td class="status_cell" id="twoday_status">0</td>
+						<td class="color_cell"><div id="color_lightblue" class="color_div"></div></td>
+					 	<td class="info_cell">Three Consecutive Days</td>
+					 	<td class="status_cell" id="threeday_status">0</td>
+					</tr>
+				</tbody>
+   			</table>
+		</div>
 		
 		<script src="//code.jquery.com/jquery-1.10.2.js"></script>
   		<script src="//code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
@@ -350,6 +379,9 @@
 					]
 				});
 				scheduler.templates.grid_full_date;
+				
+				// fill in status info	
+				updateStatusInfo();
 				
 				// tags plugin for adding and dropping students from units
 		        $("#units_choice").tagit(
@@ -463,7 +495,7 @@
 					 'icon-cursor' : 'pointer',
 				     'left' : false	
 				});
-												
+				
 				// specific scheudler settings
 				scheduler.config.api_date = "%Y-%m-%d %H:%i";
 				scheduler.config.details_on_dblclick = true;
@@ -559,6 +591,7 @@
 				dp.attachEvent("onAfterUpdate", function(sid, action, tid, tag)
 				{
 	  		  		getEventColors();
+					updateStatusInfo();
 				});
 				
 				// add mini calendar to header and add its functionality (i.e. open calendar)
@@ -599,6 +632,27 @@
 					}
 	  		  	});
 			});
+			
+			function updateStatusInfo()
+			{
+				$.ajax(
+				{
+					url: 'getDetails',
+					dataType: 'json',
+					data:
+					{
+						'status_info': true 
+					},
+					success: function(status)
+					{
+						$("#clash_status").html(status.clashes);
+						$("#evening_status").html(status.evening);
+						$("#sameday_status").html(status.sameday);
+						$("#twoday_status").html(status.twodays);
+						$("#threeday_status").html(status.threedays);
+					}
+				});
+			}
 			
 			$("#help_icon").click(function()
 			{
@@ -891,6 +945,7 @@
 						$("#edit_students_section").slideToggle();
 						$("#enrolled_students").tagit("removeAll");
 						getEventColors();
+						updateStatusInfo();
 					}
 				});
 			});
@@ -918,7 +973,8 @@
 					dataType: 'json',
 					success: function(data)
 					{
-						getEventColors();												
+						getEventColors();		
+						updateStatusInfo();
 						$("#units_choice").tagit("removeAll");
 						$("#choose_student").val();					
 					}
@@ -1177,10 +1233,113 @@
 				colouredEvents = [];
 			}
 			
+			function isContemporaneousExam(eventId) {
+
+				var defer = $.Deferred();
+				$.ajax(
+				{ 
+				   	 type: 'GET', 
+				     url: 'updateExam', 
+				     data: 
+				     {
+				    	 eventId: eventId,
+				    	 isContemporaneous: true
+				   	 },
+				  	 dataType: 'json',
+				   	 success: function (data) 
+				   	 {
+						if (data.examCodes) {
+				   		 	defer.resolve(data);
+						}
+				   	 }
+				});
+				return defer.promise();
+			}
+			
+			/* if move contemporaneous exams, alert user to choose 
+			if move together or separately */
+			function moveConfirmation(eventId) {	
+				
+				var defer = $.Deferred();					
+				isContemporaneousExam(eventId).then(function(move) {
+					
+					if (move) {
+						
+						$('#exam_together').html("");
+						
+						var unitCodes = "";
+						$.each(move.examCodes, function(k, examCode){
+							unitCodes += examCode + " ";
+						});
+						
+						$('#exam_together').html(unitCodes.trim());
+												
+						$('#dialog-move-confirm').dialog({
+					    	resizable: false,
+					    	width: 400,
+					    	height: 200,
+					    	autoOpen: true,
+					    	modal: true,
+					    	buttons: {
+								'Move Separately': function() {
+									$(this).dialog('close');
+									defer.resolve('separately');
+								},
+						        'Move Together': function() {
+						         	$(this).dialog('close');
+						         	defer.resolve('together', move.eventIds);
+					        	},
+								Cancel: function() {
+									$(this).dialog('close');
+									defer.resolve(false);
+								}
+					      	}
+					    });
+					}
+				});
+				return defer.promise();
+			}
+			
+			var eventBefore = {};
+			scheduler.attachEvent("onBeforeEventChanged", function(ev, e, is_new, ev_old) {
+				
+				var state = scheduler.getState();
+				eventBefore = ev_old;
+				
+				if (state.drag_mode === 'move') {
+					
+					moveConfirmation(ev.id).then(function(move, eventIds) {
+						
+						if (move === false) {
+							ev.start_date = eventBefore.start_date; 
+							ev.end_date = eventBefore.end_date; 
+							
+							scheduler.updateEvent(ev.id); // renders the updated event
+							scheduler.updateView();
+						
+						} else if (move === 'together') {
+								
+							$.each(eventIds, function(k, eventId) {
+								
+								var otherEvent = scheduler.getEvent(eventId);
+								
+								otherEvent.start_date = ev.start_date; 
+								otherEvent.end_date = ev.end_date; 
+								
+								scheduler.updateEvent(otherEvent.id); // renders the updated event
+								scheduler.updateView();
+							});
+						}
+					});
+				}
+				return true;
+			});
+			
 			// on event changed, update event colours
 			scheduler.attachEvent("onEventChanged", function(id,ev)
 			{
 				getEventColors();
+				updateStatusInfo();
 			});
 			
 			// change date on header to Details view on before view change
@@ -1468,6 +1627,7 @@
 		  			scheduler.endLightbox(true, html("custom_form"));
 	  				submit_lightbox();
 	  				getEventColors();
+					updateStatusInfo();
 				}	
 	  			else
 		  		{

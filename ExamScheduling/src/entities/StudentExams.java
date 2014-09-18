@@ -52,7 +52,7 @@ public class StudentExams
 	}
 		
 	// SELECT se.StudentID
-	// FROM dbo.STUDENT_EXAMS se JOIN dbo.StudyUnits st ON se.ExamID = st.ID
+	// FROM dbo.STUDENT_EXAMS se JOIN dbo.Exams st ON se.ExamID = st.ID
 	// WHERE st.UnitCode = 'unitCode'
 	
 	public static ArrayList<String> getStudentsInExam(Connection conn, int unitId)
@@ -70,13 +70,13 @@ public class StudentExams
 			query.append("\nFROM ");
 			query.append(TBL_STUDENTEXAMS);
 			query.append(" se JOIN ");
-			query.append(StudyUnit.TBL_STUDYUNITS);
+			query.append(Exam.TBL_EXAMS);
 			query.append(" st ON se.");
 			query.append(StudentExams.FLD_EXAMID);
 			query.append(" = st.");
-			query.append(StudyUnit.FLD_ID);
+			query.append(Exam.FLD_ID);
 			query.append("\nWHERE st.");
-			query.append(StudyUnit.FLD_ID);
+			query.append(Exam.FLD_ID);
 			query.append(" = '");
 			query.append(unitId);
 			query.append("'");
@@ -99,7 +99,7 @@ public class StudentExams
 	}
 	
 	// SELECT st.UnitCode
-	// FROM dbo.Student_Exams se JOIN dbo.StudyUnits st ON se.ExamID = st.ID
+	// FROM dbo.Student_Exams se JOIN dbo.Exams st ON se.ExamID = st.ID
 	// WHERE se.StudentID = '306993M';
 	
 	public static ArrayList<String> getStudentExams(Connection conn, String studentID)
@@ -112,17 +112,17 @@ public class StudentExams
 			query = new StringBuffer();
 		     
 			query.append("SELECT st.");
-			query.append(StudyUnit.FLD_UNITCODE);
+			query.append(Exam.FLD_UNITCODE);
 			query.append(", ");
-			query.append(StudyUnit.FLD_EVENING);
+			query.append(Exam.FLD_EVENING);
 			query.append("\nFROM ");
 			query.append(TBL_STUDENTEXAMS);
 			query.append(" se JOIN ");
-			query.append(StudyUnit.TBL_STUDYUNITS);
+			query.append(Exam.TBL_EXAMS);
 			query.append(" st ON se.");
 			query.append(StudentExams.FLD_EXAMID);
 			query.append(" = st.");
-			query.append(StudyUnit.FLD_ID);
+			query.append(Exam.FLD_ID);
 			query.append("\nWHERE se.");
 			query.append(Student.FLD_STUDENTID);
 			query.append(" = '");
@@ -134,8 +134,8 @@ public class StudentExams
 			
 			while (rs.next()) 
 			{
-				String unitCode = rs.getString(StudyUnit.FLD_UNITCODE);
-				boolean evening = rs.getBoolean(StudyUnit.FLD_EVENING);
+				String unitCode = rs.getString(Exam.FLD_UNITCODE);
+				boolean evening = rs.getBoolean(Exam.FLD_EVENING);
 				
 				if (evening)
 					studyUnitCodes.add(unitCode + " - evening");
@@ -152,7 +152,7 @@ public class StudentExams
 	}
 	
 	// DELETE se 
-	// FROM dbo.STUDENT_EXAMS se JOIN dbo.STUDYUNITS st ON se.ExamID = st.ID		
+	// FROM dbo.STUDENT_EXAMS se JOIN dbo.Exams st ON se.ExamID = st.ID		
 	// WHERE se.StudentID = '123456M' if (unitCode != null) { AND st.UnitCode = 'CIS3087' }
 	
 	// if UnitCode = null, student is dropped from all his units

@@ -1,39 +1,35 @@
 package thesis.timetable_generation;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.Serializable;
-import java.util.Properties;
 
 public class GAParameters implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
 	
-	private double crossoverRate;
-	private double mutationRate;
-	private int noOfGenerations;
-	private int noOfChromosomes;
-	private int crossoverType;
-	private int fitnessFunction;
-	private int elitistSelection;
-	private int randomIntroduction;
-	private int interpolatingRates;
-	private int inverseSquarePressure;
+	private Double crossoverRate;
+	private Double mutationRate;
+	private Integer noOfGenerations;
+	private Integer noOfChromosomes;
+	private Integer crossoverType;
+	private Integer fitnessFunction;
+	private Integer elitistSelection;
+	private Integer randomIntroduction;
+	private Integer interpolatingRates;
+	private Integer inverseSquarePressure;
 	
-	private int clashPunishment; 
-	private int eveningPunishment;
-	private int samedayPunishment; 
-	private int twodaysPunishment; 
-	private int threedaysPunishment;
-	private int spreadOutPunishment;
-	private int noOfStudentsPunishment;
-	private int eveningMorningPunishment;
+	private Integer clashPunishment; 
+	private Integer eveningPunishment;
+	private Integer samedayPunishment; 
+	private Integer twodaysPunishment; 
+	private Integer threedaysPunishment;
+	private Integer spreadOutPunishment;
+	private Integer noOfStudentsPunishment;
+	private Integer eveningMorningPunishment;
 	
-	private double minCrossoverRate;
-	private double maxMutationRate;
-	private double stepValue;
+	private Double minCrossoverRate;
+	private Double maxMutationRate;
+	private Double crossoverStepValue;
+	private Double mutationStepValue;
 	
 	public static final class CrossoverType {
 		
@@ -67,211 +63,179 @@ public class GAParameters implements Serializable {
 		public static final int INTERPOLATING_RATES = 1;
 	}
 	
-	public double getCrossoverRate() {
+	public Double getCrossoverRate() {
 		return crossoverRate;
 	}
 
-	public void setCrossoverRate(double crossoverRate) {
+	public void setCrossoverRate(Double crossoverRate) {
 		this.crossoverRate = crossoverRate;
 	}
 
-	public double getMutationRate() {
+	public Double getMutationRate() {
 		return mutationRate;
 	}
 
-	public void setMutationRate(double mutationRate) {
+	public void setMutationRate(Double mutationRate) {
 		this.mutationRate = mutationRate;
 	}
 
-	public int getNoOfGenerations() {
+	public Integer getNoOfGenerations() {
 		return noOfGenerations;
 	}
 
-	public void setNoOfGenerations(int noOfGenerations) {
+	public void setNoOfGenerations(Integer noOfGenerations) {
 		this.noOfGenerations = noOfGenerations;
 	}
 
-	public int getNoOfChromosomes() {
+	public Integer getNoOfChromosomes() {
 		return noOfChromosomes;
 	}
 
-	public void setNoOfChromosomes(int noOfChromosomes) {
+	public void setNoOfChromosomes(Integer noOfChromosomes) {
 		this.noOfChromosomes = noOfChromosomes;
 	}
 
-	public int getClashPunishment() {
+	public Integer getClashPunishment() {
 		return clashPunishment;
 	}
 
-	public void setClashPunishment(int clashPunishment) {
+	public void setClashPunishment(Integer clashPunishment) {
 		this.clashPunishment = clashPunishment;
 	}
 
-	public int getEveningPunishment() {
+	public Integer getEveningPunishment() {
 		return eveningPunishment;
 	}
 
-	public void setEveningPunishment(int eveningPunishment) {
+	public void setEveningPunishment(Integer eveningPunishment) {
 		this.eveningPunishment = eveningPunishment;
 	}
 	
-	public int getSameDayPunishment() {
+	public Integer getSameDayPunishment() {
 		return samedayPunishment;
 	}
 
-	public void setSameDayPunishment(int samedayPunishment) {
+	public void setSameDayPunishment(Integer samedayPunishment) {
 		this.samedayPunishment = samedayPunishment;
 	}
 
-	public int getTwoDaysPunishment() {
+	public Integer getTwoDaysPunishment() {
 		return twodaysPunishment;
 	}
 
-	public void setTwoDaysPunishment(int twodaysPunishment) {
+	public void setTwoDaysPunishment(Integer twodaysPunishment) {
 		this.twodaysPunishment = twodaysPunishment;
 	}
 
-	public int getThreeDaysPunishment() {
+	public Integer getThreeDaysPunishment() {
 		return threedaysPunishment;
 	}
 
-	public void setThreeDaysPunishment(int threedaysPunishment) {
+	public void setThreeDaysPunishment(Integer threedaysPunishment) {
 		this.threedaysPunishment = threedaysPunishment;
 	}
 
-	public int getSpreadOutPunishment() {
+	public Integer getSpreadOutPunishment() {
 		return spreadOutPunishment;
 	}
 
-	public void setSpreadOutPunishment(int spreadOutPunishment) {
+	public void setSpreadOutPunishment(Integer spreadOutPunishment) {
 		this.spreadOutPunishment = spreadOutPunishment;
 	}
 	
-	public int getNoOfStudentsPunishment() {
+	public Integer getNoOfStudentsPunishment() {
 		return noOfStudentsPunishment;
 	}
 
-	public void setNoOfStudentPunishment(int noOfStudentsPunishment) {
+	public void setNoOfStudentsPunishment(Integer noOfStudentsPunishment) {
 		this.noOfStudentsPunishment = noOfStudentsPunishment;
 	}
 	
-	public int getEveningMorningPunishment() {
+	public Integer getEveningMorningPunishment() {
 		return eveningMorningPunishment;
 	}
 
-	public void setEveningMorningPunishment(int eveningMorningPunishment) {
+	public void setEveningMorningPunishment(Integer eveningMorningPunishment) {
 		this.eveningMorningPunishment = eveningMorningPunishment;
 	}
 
-	public double getMinCrossoverRate() {
+	public Double getMinCrossoverRate() {
 		return minCrossoverRate;
 	}
 
-	public void setMinCrossoverRate(double minCrossoverRate) {
+	public void setMinCrossoverRate(Double minCrossoverRate) {
 		this.minCrossoverRate = minCrossoverRate;
 	}
 
-	public double getMaxMutationRate() {
+	public Double getMaxMutationRate() {
 		return maxMutationRate;
 	}
 
-	public void setMaxMutationRate(double maxMutationRate) {
+	public void setMaxMutationRate(Double maxMutationRate) {
 		this.maxMutationRate = maxMutationRate;
 	}
-
-	public double getStepValue() {
-		return stepValue;
+	
+	public Double getCrossoverStepValue() {
+		return crossoverStepValue;
 	}
 
-	public void setStepValue(double stepValue) {
-		this.stepValue = stepValue;
+	public void setCrossoverStepValue(Double crossoverStepValue) {
+		this.crossoverStepValue = crossoverStepValue;
+	}
+
+	public Double getMutationStepValue() {
+		return mutationStepValue;
+	}
+
+	public void setMutationStepValue(Double mutationStepValue) {
+		this.mutationStepValue = mutationStepValue;
 	}
 	
-	public int getCrossoverType() {
+	public Integer getCrossoverType() {
 		return crossoverType;
 	}
 
-	public void setCrossoverType(int crossoverType) {
+	public void setCrossoverType(Integer crossoverType) {
 		this.crossoverType = crossoverType;
 	}
 
-	public int getFitnessFunction() {
+	public Integer getFitnessFunction() {
 		return fitnessFunction;
 	}
 
-	public void setFitnessFunction(int fitnessFunction) {
+	public void setFitnessFunction(Integer fitnessFunction) {
 		this.fitnessFunction = fitnessFunction;
 	}
 
-	public int getElitistSelection() {
+	public Integer getElitistSelection() {
 		return elitistSelection;
 	}
 
-	public void setElitistSelection(int elitistSelection) {
+	public void setElitistSelection(Integer elitistSelection) {
 		this.elitistSelection = elitistSelection;
 	}
 
-	public int getRandomIntroduction() {
+	public Integer getRandomIntroduction() {
 		return randomIntroduction;
 	}
 
-	public void setRandomIntroduction(int randomIntroduction) {
+	public void setRandomIntroduction(Integer randomIntroduction) {
 		this.randomIntroduction = randomIntroduction;
 	}
 
-	public int getInterpolatingRates() {
+	public Integer getInterpolatingRates() {
 		return interpolatingRates;
 	}
 
-	public void setInterpolatingRates(int interpolatingRates) {
+	public void setInterpolatingRates(Integer interpolatingRates) {
 		this.interpolatingRates = interpolatingRates;
 	}
 
-	public int getInverseSquarePressure() {
+	public Integer getInverseSquarePressure() {
 		return inverseSquarePressure;
 	}
 
-	public void setInverseSquarePressure(int inverseSquarePressure) {
+	public void setInverseSquarePressure(Integer inverseSquarePressure) {
 		this.inverseSquarePressure = inverseSquarePressure;
-	}
-	
-	public void setGAParameters()
-	{
-		
-		try {
-			
-			Properties properties = new Properties();
-			properties.setProperty("crossoverRate", Double.toString(crossoverRate));
-			properties.setProperty("mutationRate", Double.toString(mutationRate));
-			properties.setProperty("noOfGenerations", Integer.toString(noOfGenerations));
-			properties.setProperty("crossoverType", Integer.toString(crossoverType));
-			properties.setProperty("fitnessFunction", Integer.toString(fitnessFunction));
-			properties.setProperty("elitistSelection", Integer.toString(elitistSelection));
-			properties.setProperty("randomIntroduction", Integer.toString(randomIntroduction));
-			properties.setProperty("interpolatingRates", Integer.toString(interpolatingRates));
-			properties.setProperty("inverseSquarePressure", Integer.toString(inverseSquarePressure));
-			properties.setProperty("minCrossoverRate", Double.toString(minCrossoverRate));
-			properties.setProperty("maxMutationRate", Double.toString(maxMutationRate));
-			properties.setProperty("stepValue", Double.toString(stepValue));
-			properties.setProperty("clashPunishment", Integer.toString(clashPunishment));
-			properties.setProperty("eveningPunishment", Integer.toString(eveningPunishment));
-			properties.setProperty("samedayPunishment", Integer.toString(samedayPunishment));
-			properties.setProperty("twodaysPunishment", Integer.toString(twodaysPunishment));
-			properties.setProperty("threedaysPunishment", Integer.toString(threedaysPunishment));
-			properties.setProperty("spreadOutPunishment", Integer.toString(spreadOutPunishment));
-			properties.setProperty("noOfStudentsPunishment", Integer.toString(noOfStudentsPunishment));
-			properties.setProperty("eveningMorningPunishment", Integer.toString(eveningMorningPunishment));
-			
-			File file = new File("ga_parameters.properties");
-			FileOutputStream fileOut = new FileOutputStream(file);
-			properties.store(fileOut, "GA Parameters");
-			fileOut.close();
-		
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			
-		} catch (IOException e) {
-			e.printStackTrace();
-		}	
 	}
 }

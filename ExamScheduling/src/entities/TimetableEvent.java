@@ -15,11 +15,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 import thesis.timetable_generation.Chromosome;
+import thesis.timetable_generation.ExamIndexMaps;
 import thesis.timetable_generation.GeneticAlgorithm;
 import thesis.timetable_generation.InputParameters;
 import thesis.timetable_generation.Timeslot;
 
 import com.dhtmlx.planner.DHXEv;
+import com.google.common.collect.ListMultimap;
 
 public class TimetableEvent {
 
@@ -74,8 +76,8 @@ public class TimetableEvent {
 	}
 	
 	// insert timetable event when new exam slot is added to the timetable
-	public static PreparedStatement insertEvent(Connection conn, DHXEv event, int examID) throws SQLException
-	{ 		
+	public static PreparedStatement insertEvent(Connection conn, DHXEv event, int examID) throws SQLException { 		
+		
 		StringBuffer query = null; 
 		PreparedStatement pstmt = null;
 		
@@ -94,16 +96,15 @@ public class TimetableEvent {
 		query.append(", ");
 		query.append(FLD_ENDDATE);
 		
-		if (examID != -1)
-		{
+		if (examID != -1) {
 			query.append(", ");
 			query.append(FLD_EXAMID);
 		}
 		query.append(") VALUES (?,?,?");
 		
-		if (examID != -1)
+		if (examID != -1) {
 			query.append(",?");
-		
+		}
 		query.append(")");
 			
 		pstmt = conn.prepareStatement(query.toString(), Statement.RETURN_GENERATED_KEYS);
@@ -111,16 +112,17 @@ public class TimetableEvent {
 		pstmt.setString(2, start_date);
 		pstmt.setString(3, end_date);
 		
-		if (examID != -1)
+		if (examID != -1) {
 			pstmt.setInt(4, examID);
-				
+		}
+		
 		return pstmt;
 	}
 	
 	// update timetable event, when event is moved to another date or text is modified
-	public static PreparedStatement updateEvent(Connection conn, DHXEv event) throws SQLException
-	{ 
-		 StringBuffer query = null;
+	public static PreparedStatement updateEvent(Connection conn, DHXEv event) throws SQLException { 
+		 
+		StringBuffer query = null;
 		 PreparedStatement pstmt = null;
 		 
  		 String start_date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(event.getStart_date());
@@ -134,40 +136,41 @@ public class TimetableEvent {
    		 Timeslot timeslot = new Timeslot(timeslotStart, timeslotEnd);
    		 
    		 int examID = getStudyUnitID(conn, event.getId());
-   		 moveEvent(examID, timeslot);
+   		 boolean successful = moveEvent(examID, timeslot);
    		 
-   		 // update extra event data for study units table
-   		 query = new StringBuffer();
-         
-   		 query.append("UPDATE ");
-   	 	 query.append(TBL_EVENTS);
-   		 query.append(" SET ");
-   		 query.append(FLD_UNITCODE);
-   		 query.append(" = ?, ");
-   		 query.append(FLD_STARTDATE);
-   		 query.append(" = ?, ");
-   		 query.append(FLD_ENDDATE);
-   		 query.append(" = ? ");
-   		 query.append(" WHERE ");
-   		 query.append(FLD_ID);
-		 query.append(" = ? ");
-		 
-		 pstmt = conn.prepareStatement(query.toString(), Statement.RETURN_GENERATED_KEYS);
-		 pstmt.setString(1, event.getText());
-		 pstmt.setString(2, start_date);
-		 pstmt.setString(3, end_date);
-		 pstmt.setInt(4, event.getId());
+   		 if (successful) {
+	   		 // update extra event data for study units table
+	   		 query = new StringBuffer();
+	         
+	   		 query.append("UPDATE ");
+	   	 	 query.append(TBL_EVENTS);
+	   		 query.append(" SET ");
+	   		 query.append(FLD_UNITCODE);
+	   		 query.append(" = ?, ");
+	   		 query.append(FLD_STARTDATE);
+	   		 query.append(" = ?, ");
+	   		 query.append(FLD_ENDDATE);
+	   		 query.append(" = ? ");
+	   		 query.append(" WHERE ");
+	   		 query.append(FLD_ID);
+			 query.append(" = ? ");
+			 
+			 pstmt = conn.prepareStatement(query.toString(), Statement.RETURN_GENERATED_KEYS);
+			 pstmt.setString(1, event.getText());
+			 pstmt.setString(2, start_date);
+			 pstmt.setString(3, end_date);
+			 pstmt.setInt(4, event.getId());
+   		 }
    		 
 		 return pstmt;
 	}
 	
-	public void updateEventDates(Connection conn)
-	{
-		 StringBuffer query = null;
+	public void updateEventDates(Connection conn) {
+		
+		StringBuffer query = null;
 		 PreparedStatement pstmt = null;
 		 
-		 try
-		 {
+		 try {
 			 query = new StringBuffer();
 	         
 			 query.append("UPDATE ");
@@ -190,15 +193,14 @@ public class TimetableEvent {
 			 pstmt.setInt(3, examId);
 			 pstmt.setInt(4, id);
 			 pstmt.executeUpdate();
-		 }
-		 catch (SQLException e)
-		 {
+		 
+		 } catch (SQLException e) {
 			 System.out.println("[TimetableEvent.updateEventDates()]: " + e.getMessage());
 		 }
 	}
 	
 	//SELECT t.* 
-	//FROM dbo.TIMETABLE_EVENTS t JOIN dbo.STUDYUNITS s 
+	//FROM dbo.TIMETABLE_EVENTS t JOIN dbo.Exams s 
 	//ON t.EXAMID = s.ID 
 	//WHERE t.UNITCODE = 'CIS1021' AND s.EVENING = 'true';
 	
@@ -216,17 +218,17 @@ public class TimetableEvent {
    	    	query.append("\nFROM ");
    			query.append(TBL_EVENTS);
    			query.append(" t JOIN ");
-   			query.append(StudyUnit.TBL_STUDYUNITS);
+   			query.append(Exam.TBL_EXAMS);
    			query.append(" s ON t.");
    			query.append(FLD_EXAMID);
    			query.append(" = s.");
-   			query.append(StudyUnit.FLD_ID);
+   			query.append(Exam.FLD_ID);
    			query.append("\nWHERE t.");			
    			query.append(FLD_UNITCODE);
    			query.append(" = '");
    			query.append(unitCode);
    			query.append("' AND s.");
-   			query.append(StudyUnit.FLD_EVENING);
+   			query.append(Exam.FLD_EVENING);
    			query.append(" = '");
    			query.append(evening);
    			query.append("'");
@@ -319,7 +321,6 @@ public class TimetableEvent {
    	    	
    	    } catch (SQLException e) {
       		System.out.println("[TimetableEvent.getEventID(String examID)]: " + e.getMessage());
-        
    	    }
 		
 		return eventID;
@@ -360,7 +361,6 @@ public class TimetableEvent {
    	    	
    	    } catch (SQLException e) {
       		System.out.println("[TimetableEvent.getEventStart(String eventID)]: " + e.getMessage());
-        
    	    }
 		
 		return timeslot;
@@ -369,8 +369,7 @@ public class TimetableEvent {
 	// DELETE FROM dbo.Timetable_Event
 	// WHERE ID = '23'
 	
-	public static PreparedStatement deleteEvent(Connection conn, DHXEv event) throws SQLException
-	{ 
+	public static PreparedStatement deleteEvent(Connection conn, DHXEv event) throws SQLException { 
 		 StringBuffer query = null; 
 		 PreparedStatement pstmt = null;
 		 
@@ -392,9 +391,9 @@ public class TimetableEvent {
 	}
 	
 	// add new exam in timetable chromosome
-	public static void addExam(Connection conn, int examID, Timeslot timeslotExam)
-	{
-		HashMap<Integer, Integer> indexExamID = FileHelper.getIndexExamId();
+	public static void addExam(Connection conn, int examID, Timeslot timeslotExam) {
+		ExamIndexMaps examIndexMaps = FileHelper.getExamIndexMaps();
+		
 		HashMap<Integer, Timeslot> timeslotMap = FileHelper.getTimeslotMap();
 		Chromosome chrom = FileHelper.getBestChromosome();
 		
@@ -404,33 +403,28 @@ public class TimetableEvent {
 		
 		InputParameters param = FileHelper.getInputParameters();
 
-		if (StudyUnit.isEvening(conn, examID))
-		{
+		if (Exam.isEvening(conn, examID)) {
 			param.setNoOfEveningExams(param.getNoOfEveningExams() + 1);
-			HashMap<Integer, Integer> eveningIndexExamId = FileHelper.getEveningIndexExamId();
-			eveningIndexExamId.put(examID, examIndex);
-			FileHelper.saveEveningIndexExamId(eveningIndexExamId);
-		}
-		else
-		{
+			examIndexMaps.addEveningIndexExamEntry(examIndex, examID);
+		
+		} else {
 			param.setNoOfDayExams(param.getNoOfDayExams() + 1);
 		}
 		
 		FileHelper.saveInputParameters(param);
 		
-		indexExamID.put(examID, examIndex);
-		FileHelper.saveIndexExamId(indexExamID);
+		examIndexMaps.addIndexExamEntry(examIndex, examID);
+		FileHelper.saveExamIndexMaps(examIndexMaps);
 		
 		Integer timeslotNo = DateHelper.getTimeslotNoByTimeslot(timeslotMap, timeslotExam);
 		
-		if (timeslotNo != null)
-		{
+		if (timeslotNo != null) {
 			timetableState[examIndex] = timeslotNo;
 		}
 		// else add an entry in timeslotmap for this new timeslot and
 		// re structure eval matrix for temp differences
-		else
-		{
+		else {
+			
 			int newTimeslotNo = timeslotMap.size();
 			timeslotMap.put(newTimeslotNo, timeslotExam);
 			FileHelper.saveTimeslotMap(timeslotMap);
@@ -446,45 +440,42 @@ public class TimetableEvent {
 	}
 		
 	// remove exam from timetable
-	public static void deleteExam(Connection conn, int examID)
-	{
-		InputParameters param = FileHelper.getInputParameters();
+	public static void deleteExam(Connection conn, int examID) {
 		
-		if (StudyUnit.isEvening(conn, examID))
-		{
+		InputParameters param = FileHelper.getInputParameters();
+		ExamIndexMaps examIndexMaps = FileHelper.getExamIndexMaps();
+		int examIndex = examIndexMaps.getExamIDIndex().get(examID);
+		
+		if (Exam.isEvening(conn, examID)) {
 			param.setNoOfEveningExams(param.getNoOfEveningExams() - 1);
-			HashMap<Integer, Integer> eveningIndexExamId = FileHelper.getEveningIndexExamId();
-			eveningIndexExamId.remove(examID);
-			FileHelper.saveEveningIndexExamId(eveningIndexExamId);
-		}
-		else
-		{
+			examIndexMaps.removeEveningIndexExamEntry(examIndex, examID);
+		
+		} else {
 			param.setNoOfDayExams(param.getNoOfDayExams() - 1);
 		}
 		
 		FileHelper.saveInputParameters(param);
+		examIndexMaps.removeIndexExamEntry(examIndex, examID);
+		FileHelper.saveExamIndexMaps(examIndexMaps);
 		
 		GeneticAlgorithm ga = new GeneticAlgorithm();
 		
-		HashMap<Integer, Integer> indexExamId = ga.getIndexExamID();
-		int examIndex = indexExamId.get(examID);
-		Chromosome chromosome = FileHelper.getBestChromosome();
-		
-		// set timetable entry for that index as -1
+		Chromosome chromosome = FileHelper.getBestChromosome();	
 		Integer[] timetableState = chromosome.getChromosome();
-		timetableState[examIndex] = -1;
-		chromosome.setChromosome(timetableState);
 		
-		indexExamId.remove(examID);
-		FileHelper.saveIndexExamId(indexExamId);
+		// if this was the only exam mapped to that index, set timetable[index] to -1, 
+		// else just re evaluate with missing exam
+		ListMultimap<Integer, Integer> indexExamId = examIndexMaps.getIndexExamID();
+		if (indexExamId.get(examIndex) == null || indexExamId.get(examIndex).size() == 0) {
+			timetableState[examIndex] = -1;
+			chromosome.setChromosome(timetableState);
+		}
 		
 		Chromosome chromosomeAfter = null;
-		try
-		{
+		try { 
 			chromosomeAfter = ga.evaluateChromosome(chromosome);
 		}
-		catch (Exception e)
-		{
+		catch (Exception e) {
 			e.printStackTrace();
 		}
 		
@@ -492,53 +483,59 @@ public class TimetableEvent {
 	}
 	
 	// move or change event duration
-	public static void moveEvent(int examID, Timeslot timeslot)
-	{
-		GeneticAlgorithm ga = new GeneticAlgorithm();
+	public static boolean moveEvent(int examID, Timeslot timeslot) {
 		
-		int examIndex = ga.getIndexExamID().get(examID);
-		Chromosome chromosome = FileHelper.getBestChromosome();
-		FileHelper.saveChromosomeBefore(chromosome);
+		ExamIndexMaps examIndexMaps = FileHelper.getExamIndexMaps();
+		int examIndex = examIndexMaps.getExamIDIndex().get(examID);
+		int noOfExamsInIndex = examIndexMaps.getIndexExamID().get(examIndex).size();
 		
-		Integer[] timetableState = chromosome.getChromosome();
+		if (noOfExamsInIndex == 1) {
 		
-		HashMap<Integer, Timeslot> timeslotMap = ga.getTimeslotMap();
-		Integer timeslotNo = DateHelper.getTimeslotNoByTimeslot(timeslotMap, timeslot);
-		
-		// if the exam is being moved to a timeslot in timeslot settings,
-		// set timtable at index to that timeslot number
-		if (timeslotNo != null)
-		{
-			// if event was not moved
-			if (timetableState[examIndex] == timeslotNo)
-				return;
-			else
-				timetableState[examIndex] = timeslotNo;
+			GeneticAlgorithm ga = new GeneticAlgorithm();
+			
+			Chromosome chromosome = FileHelper.getBestChromosome();		
+			Integer[] timetableState = chromosome.getChromosome();
+			
+			HashMap<Integer, Timeslot> timeslotMap = ga.getTimeslotMap();
+			Integer timeslotNo = DateHelper.getTimeslotNoByTimeslot(timeslotMap, timeslot);
+			
+			// if the exam is being moved to a timeslot in timeslot settings,
+			// set timtable at index to that timeslot number
+			if (timeslotNo != null) {
+				// if event was not moved
+				if (timetableState[examIndex] == timeslotNo)
+					return true;
+				else
+					timetableState[examIndex] = timeslotNo;
+			}
+			// else add an entry in timeslotmap for this new timeslot and
+			// re structure eval matrix for temp differences
+			else {
+				
+				int newTimeslotNo = timeslotMap.size();
+				timeslotMap.put(newTimeslotNo, timeslot);
+				FileHelper.saveTimeslotMap(timeslotMap);
+				ga.generateEvalMatrix(timeslotMap, false);
+				
+				timetableState[examIndex] = newTimeslotNo; 
+			}
+			
+			chromosome.setChromosome(timetableState);
+			
+			Chromosome chromosomeAfter = null;
+			try {
+				chromosomeAfter = ga.evaluateChromosome(chromosome);
+			
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+			FileHelper.saveBestChromosome(chromosomeAfter);
+			return true;
 		}
-		// else add an entry in timeslotmap for this new timeslot and
-		// re structure eval matrix for temp differences
 		else
 		{
-			int newTimeslotNo = timeslotMap.size();
-			timeslotMap.put(newTimeslotNo, timeslot);
-			FileHelper.saveTimeslotMap(timeslotMap);
-			ga.generateEvalMatrix(timeslotMap, false);
-			
-			timetableState[examIndex] = newTimeslotNo; 
+			return false;
 		}
-		
-		chromosome.setChromosome(timetableState);
-		
-		Chromosome chromosomeAfter = null;
-		try
-		{
-			chromosomeAfter = ga.evaluateChromosome(chromosome);
-		}
-		catch (Exception e)
-		{
-			e.printStackTrace();
-		}
-		
-		FileHelper.saveBestChromosome(chromosomeAfter);
 	}
 }

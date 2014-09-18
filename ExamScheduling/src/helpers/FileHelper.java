@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import thesis.timetable_generation.Chromosome;
+import thesis.timetable_generation.ExamIndexMaps;
 import thesis.timetable_generation.ExamMap;
 import thesis.timetable_generation.GAParameters;
 import thesis.timetable_generation.InputParameters;
@@ -26,11 +27,15 @@ public class FileHelper {
 	{
 		File currentFolder = new File(System.getProperty("user.home"));
 		File workingFolder = new File(currentFolder, "TimetableStructures");
+		File projectFolder = new File(workingFolder, "ExamScheduling");
 		
 		if (!workingFolder.exists()) {
 	         workingFolder.mkdir();
 	    }
-		return workingFolder.getAbsolutePath();
+		if (!projectFolder.exists()) {
+			projectFolder.mkdir();
+		}
+		return projectFolder.getAbsolutePath();
 	}
 	
 	// helper to save objects in a file. return objectoutputstream and write object in respective class
@@ -160,63 +165,20 @@ public class FileHelper {
 		}
 		return inputParameters;
 	}
-		
-	@SuppressWarnings("unchecked")
-	public static HashMap<Integer, Integer> getIndexExamId()
+	
+	public static ExamIndexMaps getExamIndexMaps()
 	{
 		ObjectInputStream inputStream = null;
-		HashMap<Integer, Integer> indexExamID = null;
+		ExamIndexMaps eveningIndexExamID = null;
 		
 		try
 		{
-			inputStream = FileHelper.getObjectReader("indexExamID.data");
-			indexExamID = (HashMap<Integer, Integer>) inputStream.readObject();
+			inputStream = FileHelper.getObjectReader("ExamIndexMaps.data");
+			eveningIndexExamID = (ExamIndexMaps) inputStream.readObject();
 		}
 		catch (Exception e)
 		{
-			System.out.println("[ReadData.getIndexExamId()]: " + e.getMessage());
-		}
-		finally
-		{
-			FileHelper.closeInputStream(inputStream);
-		}
-		
-		return indexExamID;
-	}
-	
-	public static void saveIndexExamId(HashMap<Integer, Integer> indexExamID)
-	{
-		ObjectOutputStream outputStream = null;
-		
-		try
-		{
-			outputStream = FileHelper.getObjectWriter("indexExamID.data");
-			outputStream.writeObject(indexExamID);
-		}
-		catch (IOException e)
-		{
-			System.out.println("[ReadData.saveIndexExamId()]: " + e.getMessage());
-		}
-		finally
-		{
-			FileHelper.closeOutputStream(outputStream);
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-	public static HashMap<Integer, Integer> getEveningIndexExamId()
-	{
-		ObjectInputStream inputStream = null;
-		HashMap<Integer, Integer> eveningIndexExamID = null;
-		
-		try
-		{
-			inputStream = FileHelper.getObjectReader("eveningIndexExamID.data");
-			eveningIndexExamID = (HashMap<Integer, Integer>) inputStream.readObject();
-		}
-		catch (Exception e)
-		{
-			System.out.println("[ReadData.getEveningIndexExamId()]: " + e.getMessage());
+			System.out.println("[ReadData.getExamIndexMaps()]: " + e.getMessage());
 		}
 		finally
 		{
@@ -226,18 +188,18 @@ public class FileHelper {
 		return eveningIndexExamID;
 	}
 	
-	public static void saveEveningIndexExamId(HashMap<Integer, Integer> eveningIndexExamID)
+	public static void saveExamIndexMaps(ExamIndexMaps examIndexMaps)
 	{
 		ObjectOutputStream outputStream = null;
 		
 		try
 		{
-			outputStream = FileHelper.getObjectWriter("eveningIndexExamID.data");
-			outputStream.writeObject(eveningIndexExamID);
+			outputStream = FileHelper.getObjectWriter("ExamIndexMaps.data");
+			outputStream.writeObject(examIndexMaps);
 		}
 		catch (IOException e)
 		{
-			System.out.println("[ReadData.saveEveningIndexExamId()]: " + e.getMessage());
+			System.out.println("[ReadData.saveExamIndexMaps()]: " + e.getMessage());
 		}
 		finally
 		{
@@ -285,6 +247,48 @@ public class FileHelper {
 			FileHelper.closeOutputStream(outputStream);
 		}
 	}
+	
+	@SuppressWarnings("unchecked")
+	public static HashMap<ExamMap, ArrayList<String>> getUniqueExamMatrix()
+	{
+		ObjectInputStream inputStream = null;
+		HashMap<ExamMap, ArrayList<String>> uniqueExamMatrix = null;
+		
+		try
+		{
+			inputStream = FileHelper.getObjectReader("uniqueExamMatrix.data");
+			uniqueExamMatrix = (HashMap<ExamMap, ArrayList<String>>) inputStream.readObject();
+		}
+		catch (Exception e)
+		{
+			System.out.println("[GeneticAlgorithm.getUniqueExamMatrix()]: " + e.getMessage());
+		}
+		finally
+		{
+			FileHelper.closeInputStream(inputStream);
+		}
+		return uniqueExamMatrix;
+	}
+	
+	public static void saveUniqueExamMatrix(HashMap<ExamMap, ArrayList<String>> uniqueExamMatrix)
+	{
+		ObjectOutputStream outputStream = null;
+		
+		try
+		{
+			outputStream = FileHelper.getObjectWriter("uniqueExamMatrix.data");
+			outputStream.writeObject(uniqueExamMatrix);
+		}
+		catch (IOException e)
+		{
+			System.out.println("[GeneticAlgorithm.saveUniqueExamMatrix()]: " + e.getMessage());
+		}
+		finally
+		{
+			FileHelper.closeOutputStream(outputStream);
+		}
+	}
+
 	
 	@SuppressWarnings("unchecked")
 	public static HashMap<Integer[], ExamMap> getExamMapObj()
@@ -408,46 +412,6 @@ public class FileHelper {
 		}
 		return timeslotMap;
 	}
-
-	public static void saveChromosomeBefore(Chromosome chromosome)
-	{
-		ObjectOutputStream outputStream = null;
-		
-		try
-		{
-			outputStream = FileHelper.getObjectWriter("chromosomeBefore.data");
-			outputStream.writeObject(chromosome);
-		}
-		catch (IOException e)
-		{
-			System.out.println("[GeneticAlgorithm.saveChromosomeBefore()]: " + e.getMessage());
-		}
-		finally
-		{
-			FileHelper.closeOutputStream(outputStream);
-		}
-	}
-	
-	public static Chromosome getChromosomeBefore()
-	{
-		ObjectInputStream inputStream = null;
-		Chromosome bestChromosome = null;
-		
-		try
-		{
-			inputStream = FileHelper.getObjectReader("chromosomeBefore.data");
-			bestChromosome = (Chromosome) inputStream.readObject();
-		}
-		catch (Exception e)
-		{
-			System.out.println("[GeneticAlgorithm.getChromosomeBefore()]: " + e.getMessage());
-		}
-		finally
-		{
-			FileHelper.closeInputStream(inputStream);
-		}
-		return bestChromosome;
-	}
 	
 	public static void saveBestChromosome(Chromosome chromosome)
 	{
@@ -487,5 +451,5 @@ public class FileHelper {
 			FileHelper.closeInputStream(inputStream);
 		}
 		return bestChromosome;
-	}
+	}	
 }

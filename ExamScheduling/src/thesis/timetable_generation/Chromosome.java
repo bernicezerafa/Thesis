@@ -32,9 +32,8 @@ public class Chromosome implements Serializable {
 		List<Integer> timeslotOccurences = Lists.newArrayList(chromosome);
 		occurenceSet = HashMultiset.create(timeslotOccurences);
 		violationMap = new HashMap[Constraint.noOfConstraints];
-		
 	}
-
+	
 	public Chromosome copyChromosome(Chromosome otherChromosome) {
 		
 		Chromosome chrom = new Chromosome(otherChromosome.getChromosome());
@@ -97,7 +96,7 @@ public class Chromosome implements Serializable {
 	}
 
 	/*
-	* ExamMap - array holding exams involved
+	* ExamMap - array holding exams involved - examID's
 	* violating type - one of the constraints constants defined
 	* students violating - students affected by the constraint violation 
 	*/

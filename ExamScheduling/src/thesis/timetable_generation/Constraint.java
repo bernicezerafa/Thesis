@@ -48,6 +48,9 @@ public class Constraint implements Serializable {
 	public static final int STUDENT_DROPPED = 5;
 	public static final int NOT_CHANGED = 6;
 	
+	public static final int MEDIUM_SIZED_CLASS = 30;
+	public static final int LARGE_SIZED_CLASS = 60;
+	
 	private int clashPunish;
 	private int sameDayPunish;
 	private int twoDayPunish;

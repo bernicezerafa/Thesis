@@ -12,8 +12,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import thesis.timetable_generation.InputParameters;
 import thesis.timetable_generation.ExamMap;
+import thesis.timetable_generation.InputParameters;
 
 public class ContemporaneousExams {
 
@@ -95,10 +95,83 @@ public class ContemporaneousExams {
 		}
 	}
 	
+	// SELECT ce.*
+	// FROM ExamScheduling.dbo.CONTEMPORANEOUS_EXAMS ce
+	// JOIN ExamScheduling.dbo.EXAMS e1 ON ce.Exam1ID = e1.ID
+	// JOIN ExamScheduling.dbo.EXAMS e2 ON ce.Exam2ID = e2.ID
+	// WHERE e1.Semester = '1' AND (ce.Exam1ID = '61' OR ce.Exam2ID = '61')
+	
+	public static HashMap<Integer, Boolean> getContemporaneousExams(Connection conn, int examId, int semester)
+	{	
+		StringBuffer query = null; 
+		Statement stmt = null;
+		HashMap<Integer, Boolean> contExams = new HashMap<Integer, Boolean>();
+		
+		try
+		{
+			query = new StringBuffer();
+	        
+			query.append("SELECT ce.* \nFROM ");
+			query.append(TBL_CONTEMPORANEOUS_EXAMS);
+			query.append(" ce \nJOIN ");
+			query.append(Exam.TBL_EXAMS);
+			query.append(" e1 ON ce.");
+			query.append(FLD_EXAM1ID);
+			query.append(" = e1.");
+			query.append(Exam.FLD_ID);
+			query.append("\nJOIN ");
+			query.append(Exam.TBL_EXAMS);
+			query.append(" e2 ON ce.");
+			query.append(FLD_EXAM2ID);
+			query.append(" = e2.");
+			query.append(Exam.FLD_ID);
+			query.append("\nWHERE e1.");
+			query.append(Exam.FLD_SEMESTER);
+			query.append(" = '");
+			query.append(semester);
+			query.append("' AND (ce.");
+			query.append(FLD_EXAM1ID);
+			query.append(" = '");
+			query.append(examId);
+			query.append("'");
+			query.append(" OR ce.");
+			query.append(FLD_EXAM2ID);
+			query.append(" = '");
+			query.append(examId);
+			query.append("')");
+			
+			stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(query.toString());
+			
+			while (rs.next())
+			{
+				int exam1ID = rs.getInt(FLD_EXAM1ID);
+				int exam2ID = rs.getInt(FLD_EXAM2ID);
+				
+				if (exam1ID == examId)
+				{
+					if (Exam.isEvening(conn, exam2ID)) contExams.put(exam2ID, true);
+					else contExams.put(exam2ID, false);
+				}	
+				else if (exam2ID == examId)
+				{
+					if (Exam.isEvening(conn, exam1ID)) contExams.put(exam1ID, true);
+					else contExams.put(exam1ID, false);
+				}	
+			}
+		} 
+		catch (SQLException e)
+		{
+      		System.out.println("[ContemporaneousExams.getContemporaneousExams(int examId)]: " + e.getMessage());
+		}
+		
+		return contExams;
+	}
+	
 	// SELECT e.Exam1ID, e.Exam2ID
 	// FROM dbo.CONTEMPORANEOUS_EXAMS e 
-	// JOIN dbo.STUDYUNITS s ON e.Exam1ID = s.ID 
-	// JOIN dbo.STUDYUNITS st ON e.exam2ID = st.ID
+	// JOIN dbo.Exams s ON e.Exam1ID = s.ID 
+	// JOIN dbo.Exams st ON e.exam2ID = st.ID
 	// WHERE s.semester = '2' AND s.noOfStudents > 0 AND st.noOfStudents > 0
 	
 	public static ArrayList<ExamMap> getAllExamRelationships(Connection conn) {
@@ -106,7 +179,6 @@ public class ContemporaneousExams {
 		StringBuffer query = null; 
 		Statement stmt = null;
 		InputParameters input = FileHelper.getInputParameters();
-		HashMap<Integer, Integer> indexExamID = FileHelper.getIndexExamId();
 		
 		HashMap<Integer, ExamMap> examsRelMap = new HashMap<Integer, ExamMap>();
 		ArrayList<ExamMap> examsRel = new ArrayList<ExamMap>();
@@ -122,25 +194,25 @@ public class ContemporaneousExams {
 			query.append("\nFROM ");
 			query.append(TBL_CONTEMPORANEOUS_EXAMS);
 			query.append(" e \nJOIN ");
-			query.append(StudyUnit.TBL_STUDYUNITS);
+			query.append(Exam.TBL_EXAMS);
 			query.append(" s ON e.");
 			query.append(FLD_EXAM1ID);
 			query.append(" = s.");
-			query.append(StudyUnit.FLD_ID);
+			query.append(Exam.FLD_ID);
 			query.append("\nJOIN ");
-			query.append(StudyUnit.TBL_STUDYUNITS);
+			query.append(Exam.TBL_EXAMS);
 			query.append(" st ON e.");
 			query.append(FLD_EXAM2ID);
 			query.append(" = st.");
-			query.append(StudyUnit.FLD_ID);
+			query.append(Exam.FLD_ID);
 			query.append("\nWHERE s.");
-			query.append(StudyUnit.FLD_SEMESTER);
+			query.append(Exam.FLD_SEMESTER);
 			query.append(" = '");
 			query.append(input.getSemester());
 			query.append("' AND s.");
-			query.append(StudyUnit.FLD_NOOFSTUDENTS);
+			query.append(Exam.FLD_NOOFSTUDENTS);
 			query.append(" > 0 AND st.");
-			query.append(StudyUnit.FLD_NOOFSTUDENTS);
+			query.append(Exam.FLD_NOOFSTUDENTS);
 			query.append(" > 0 \nORDER BY e.");
 			query.append(FLD_EXAM1ID);
 			
@@ -150,8 +222,8 @@ public class ContemporaneousExams {
 			
 			while (rs.next())
 			{
-				int exam1ID = indexExamID.get(rs.getInt(FLD_EXAM1ID));
-				int exam2ID = indexExamID.get(rs.getInt(FLD_EXAM2ID));
+				int exam1ID = rs.getInt(FLD_EXAM1ID);
+				int exam2ID = rs.getInt(FLD_EXAM2ID);
 				
 				if (lastExam1ID == exam1ID)
 				{

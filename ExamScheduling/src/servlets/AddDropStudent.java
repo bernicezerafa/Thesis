@@ -6,9 +6,7 @@ import helpers.SQLHelper;
 import java.io.IOException;
 import java.sql.Connection;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -19,12 +17,10 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import thesis.timetable_generation.Chromosome;
-import thesis.timetable_generation.Constraint;
-import thesis.timetable_generation.ExamMap;
+import thesis.timetable_generation.ExamIndexMaps;
 import thesis.timetable_generation.GeneticAlgorithm;
-import thesis.timetable_generation.ReadData;
 import entities.StudentExams;
-import entities.StudyUnit;
+import entities.Exam;
 import entities.TimetableEvent;
 
 /**
@@ -35,7 +31,7 @@ public class AddDropStudent extends HttpServlet
 	private static final long serialVersionUID = 1L;
     
 	private Connection conn = null;
-	private HashMap<Integer, Integer> indexExamID = null;
+	private ExamIndexMaps examIndexMaps = null;
 	
     /**
      * @see HttpServlet#HttpServlet()
@@ -59,7 +55,7 @@ public class AddDropStudent extends HttpServlet
 				evening = true;
 			}
 			
-			int studyUnitID = StudyUnit.getStudyUnitID(conn, unitCode, evening);
+			int studyUnitID = Exam.getStudyUnitID(conn, unitCode, evening);
 			studyUnitIDs.add(studyUnitID);
 		}
     	
@@ -114,70 +110,15 @@ public class AddDropStudent extends HttpServlet
     	return studentAddDrop;
     }
     
-    public int getEventID(int examPos)
+    public int getEventID(int examID)
     {
-		int eventID = -1;
-		if (examPos != -1)
-		{
-			int exam2ID = ReadData.getKeyByValue(indexExamID, examPos);
-		    eventID = TimetableEvent.getEventID(conn, exam2ID);
-		}
-		
-		return eventID;
+    	int examIndex = examIndexMaps.getExamIDIndex().get(examID);
+    	
+    	if (examIndex != -1)
+    		return TimetableEvent.getEventID(conn, examID);
+    	else return -1;
     }
-    
-    // compares the timetable violations before student was added or dropped from study units
-    @SuppressWarnings("unchecked")
-	public JSONArray compareViolations(Chromosome chromosomeBefore, Chromosome chromosomeAfter, 
-									   ArrayList<Integer> violationsAffected)
-    {
-    	
-    	HashMap<ExamMap, ArrayList<String>>[] violationMapAfter = chromosomeAfter.getViolationMap();
-    	
-		JSONArray jsonArray = new JSONArray();
-    	indexExamID = FileHelper.getIndexExamId();
-    	
-		for (Integer violationKey: violationsAffected)
-		{
-			JSONObject violation = new JSONObject();
-			violation.put("violationType", Constraint.getViolation(violationKey));
-						
-			// if violation map for chromosome after doesnt have this violation, it means that this violation was
-			// dropped from chromosome before
-			HashMap<ExamMap, ArrayList<String>> studentsExamViolations = violationMapAfter[violationKey];
-			
-			if(studentsExamViolations != null) {
-	
-				for (Entry<ExamMap, ArrayList<String>> studentExamViolation: studentsExamViolations.entrySet())
-				{
-					ExamMap examMap = studentExamViolation.getKey();
-					ArrayList<String> commonStudents = studentExamViolation.getValue();
-					
-					int eventIDExam1 = getEventID(examMap.get(0));
-					int eventIDExam2 = getEventID(examMap.get(1));
-					int eventIDExam3 = getEventID(examMap.get(2));
-									
-					violation.put("eventId1", eventIDExam1);
-					violation.put("eventId2", eventIDExam2);
-					violation.put("eventId3", eventIDExam3);
-									
-					JSONArray studentsAffected = new JSONArray();
-					for (String studentId: commonStudents)
-					{
-						JSONObject student = new JSONObject();
-						student.put("studentId", studentId);
-						studentsAffected.add(student);
-					}
-					
-					violation.put("students", studentsAffected);
-				}
-				jsonArray.add(violation);
-			}
-		}
-		
-		return jsonArray;
-    }
-    
+        
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
@@ -217,7 +158,7 @@ public class AddDropStudent extends HttpServlet
 				String unitCode = request.getParameter("unit");
 				boolean evening = Boolean.parseBoolean(request.getParameter("evening"));
 				
-				int studyUnitId = StudyUnit.getStudyUnitID(conn, unitCode, evening);
+				int studyUnitId = Exam.getStudyUnitID(conn, unitCode, evening);
 				
 				JSONArray studentsAddDrop = addDropStudentsFromUnit(conn, studentIds, studyUnitId);
 		    	jsonObject.put("studentAddDrop", studentsAddDrop);
@@ -241,24 +182,6 @@ public class AddDropStudent extends HttpServlet
 			}
 			
 			FileHelper.saveBestChromosome(chromosomeAfter);
-			
-			ArrayList<Integer> violationsAffected = Constraint.getAffectedViolations(chromosomeBefore, chromosomeAfter);
-						
-			// send changes information to JSP page and update information from client-side
-			if (violationsAffected.size() == 0)
-			{
-				jsonObject.put("timetableAffected", false);
-			}
-			else
-			{
-				jsonObject.put("timetableAffected", true);
-				JSONArray jsonArray = compareViolations(chromosomeBefore, chromosomeAfter, violationsAffected);
-				jsonObject.put("changesArray", jsonArray);
-			}
-			
-			response.setContentType("application/json");
-			response.setCharacterEncoding("UTF-8");
-			response.getWriter().write(jsonObject.toJSONString());
 		} 
 		finally
 		{
